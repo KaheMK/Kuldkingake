@@ -575,7 +575,7 @@ function setSidebarHtml(title, html) {
         console.info('Kaart initsialiseeritud (UMD).');
       }, 50);
     }
-  </script>
+  
   // Aseta --vh muutuja, et vältida 100vh probleeme mobiilides (aadressiriba)
 function setVhVar() {
   document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
@@ -601,7 +601,7 @@ window.addEventListener('load', () => {
 
 // Alternatiiv: kui soovid eemaldada loaderi alles siis, kui kaart on initsialiseeritud,
 // kutsu removeLoader() otse oma initApp / kaart initsialiseerimise lõpus.
-
+ </script>
 </body>
 </html>
 
