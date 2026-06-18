@@ -2,117 +2,196 @@
 <html lang="et">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Kaart — Orhideed </title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Kaart — Orhideed</title>
 
-<style>
-  /* CSS muutujad ja mobiili‑kõrguse tugi */
-  :root {
-    --topbar-height: 64px;
-    --footer-height: 36px;
-    /* --vh muutuja täidetakse JS-iga (et vältida 100vh probleeme mobiilis) */
-    --vh: 1vh;
-  }
-
-  html, body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    -webkit-text-size-adjust: 100%;
-    background: var(--bg, #f7f8fa);
-  }
-
-  /* Map ja peamised alad kasutavad dünaamilist kõrgust */
-  #map {
-    width: 100%;
-    /* kasutame var(--vh) et vältida aadressiriba muutustest tekkivaid tühikuid */
-    height: calc(var(--vh, 1vh) * 100 - var(--topbar-height) - var(--footer-height));
-    min-height: 200px;
-  }
-
-  /* Täisekraan laadija (loader) — servast servani */
-  #page-loader {
-    position: fixed;
-    inset: 0; /* top:0; right:0; bottom:0; left:0; */
-    width: 100vw;
-    height: 100dvh; /* eelistame 100dvh kui brauser toetab */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #ffffff;
-    z-index: 99999;
-    -webkit-backdrop-filter: blur(0); /* ei ole vajalik, aga turvaline */
-    box-sizing: border-box;
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-  }
-
-  /* Lihtne animatsioon/tekst loaderile */
-  #page-loader .inner {
-    text-align: center;
-    color: #1f2937;
-    font-weight: 600;
-    font-size: 14px;
-  }
-</style>
-
+  <!-- Favicon (inline SVG) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 120 120%22><g fill=%22%23a3005a%22><circle cx=%2260%22 cy=%2260%22 r=%2240%22/></g></svg>" type="image/svg+xml">
 
   <!-- OpenLayers CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v7.4.0/ol.css" />
 
   <style>
-    :root{
-      --sidebar-width: 320px;
+    /* Basic vars and mobile vh fix var (set by JS) */
+    :root {
       --topbar-height: 64px;
       --footer-height: 36px;
+      --sidebar-width: 320px;
       --bg: #f7f8fa;
+      --vh: 1vh;
     }
-    html,body { height:100%; margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:#222; }
-    .topbar {
-      height: var(--topbar-height);
-      display:flex; align-items:center; justify-content:space-between;
-      padding:8px 12px; background:#fff; border-bottom:1px solid rgba(0,0,0,0.06);
-      box-shadow:0 1px 2px rgba(0,0,0,0.04); z-index:2100;
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: var(--bg);
+      color: #222;
+      -webkit-text-size-adjust: 100%;
     }
-    .app-title { margin:0; font-size:18px; font-weight:600; color:#1f2937; }
-    .top-controls { display:flex; align-items:center; gap:12px; }
-    .toggle-wrap { display:flex; align-items:center; gap:8px; }
-    .switch { position: relative; display:inline-block; width:44px; height:24px; }
-    .switch input { opacity:0; width:0; height:0; }
-    .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#ccc; transition:.2s; border-radius:24px; }
-    .slider:before { content:""; position:absolute; height:18px; width:18px; left:3px; top:3px; background:white; transition:.2s; border-radius:50%; }
-    .switch input:checked + .slider { background:#2b8aef; }
-    .switch input:checked + .slider:before { transform: translateX(20px); }
 
-    .main-area { display:flex; height: calc(100% - var(--topbar-height) - var(--footer-height)); }
-    #map { flex:1 1 auto; min-width:200px; height:100%; position:relative; }
-    .sidebar {
-      width: var(--sidebar-width); max-width:45%; background:#fff; border-left:1px solid rgba(0,0,0,0.06);
-      padding:16px; box-sizing:border-box; overflow-y:auto; z-index:2000; position:relative;
+    /* Hide original topbar and footer visually but keep in DOM (accessible) */
+    .topbar, .footer { display: none !important; }
+
+    /* Main layout: map fills viewport (we use --vh to avoid mobile 100vh issues) */
+    #map { width:100%; height: calc(var(--vh,1vh) * 100); position:relative; }
+
+    /* Branding (logo + title) overlay on map */
+    #map-branding {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      z-index: 2400;
+      pointer-events: none;
+      user-select: none;
     }
-    .sidebar.collapsed { transform: translateX(100%); }
-    .sidebar .sidebar-close { position:absolute; left:8px; top:8px; background:transparent; border:none; font-size:20px; cursor:pointer; }
-    #controls-ui { display:flex; gap:8px; align-items:center; }
-    #controls-ui button { background:#fff; border:1px solid #e6e6e6; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:13px; }
-    #controls-ui button.active { background:linear-gradient(180deg,#2b8aef,#1f6fd6); color:#fff; border-color: rgba(0,0,0,0.06); }
-    .layer-switcher { margin-top:12px; padding-top:8px; border-top:1px dashed rgba(0,0,0,0.04); }
-    .layer-switcher h3 { margin:0 0 8px 0; font-size:13px; }
-    .ls-row { display:flex; align-items:center; gap:8px; margin:6px 0; }
-    .footer { height:var(--footer-height); display:flex; align-items:center; justify-content:center; background:#fff; border-top:1px solid rgba(0,0,0,0.04); font-size:12px; color:#666; }
+    #orchid-logo-svg { width:48px; height:48px; pointer-events:auto; }
+    #map-title {
+      font-weight:800;
+      color:#a3005a;
+      font-size:16px;
+      pointer-events:auto;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+      background: rgba(255,255,255,0.85);
+      padding:4px 8px;
+      border-radius:6px;
+    }
 
-    /* popup */
-    .attr-popup { font-size:13px; }
-    .attr-popup label { display:block; margin-bottom:6px; font-weight:600; }
-    .attr-popup textarea { width:260px; height:80px; box-sizing:border-box; }
+    /* Data source overlay bottom center on map */
+    #map-source {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 12px;
+      z-index: 2400;
+      background: rgba(255,255,255,0.9);
+      padding:6px 10px;
+      border-radius:6px;
+      font-size:12px;
+      color:#444;
+      pointer-events:none;
+    }
 
+    /* Sliding sidebar tab and container */
+    #sidebar-tab {
+      position: fixed;
+      right: 0;
+      top: 40%;
+      transform: translateY(-50%);
+      background: #ff4da6;
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 8px 0 0 8px;
+      z-index: 2460;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    }
+    #sliding-sidebar {
+      position: fixed;
+      right: -320px;
+      top: 0;
+      width: 320px;
+      height: 100dvh;
+      background: #fff;
+      box-shadow: -8px 0 24px rgba(0,0,0,0.12);
+      transition: right 320ms cubic-bezier(.2,.9,.3,1);
+      z-index: 2430;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+    #sliding-sidebar.open { right: 0; }
+    #sliding-sidebar .sidebar-edge {
+      position: absolute;
+      left: -12px;
+      top: 0;
+      bottom: 0;
+      width: 12px;
+      background: linear-gradient(180deg,#ff4da6,#c2185b);
+      border-radius: 6px 0 0 6px;
+    }
+    #sidebar-pin {
+      position: absolute;
+      left: -48px;
+      top: 12px;
+      background: #ff4da6;
+      color: #fff;
+      border-radius: 6px;
+      padding: 6px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.12);
+    }
+
+    /* Ribbon */
+    #ribbon-tab {
+      position: fixed;
+      right: 12px;
+      top: 12px;
+      background: #ff4da6;
+      color: #fff;
+      padding: 8px;
+      border-radius: 8px;
+      z-index: 2450;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    }
+    #tool-ribbon {
+      position: fixed;
+      right: 12px;
+      top: 56px;
+      display:flex;
+      flex-direction: column;
+      gap:8px;
+      z-index: 2440;
+      transition: transform 260ms ease, opacity 200ms ease;
+    }
+    #tool-ribbon.hidden { transform: translateX(8px) scale(0.98); opacity: 0; pointer-events:none; }
+    .rbtn { background:#fff; border:1px solid #eee; padding:8px 10px; border-radius:8px; cursor:pointer; min-width:110px; font-weight:600; color:#333; }
+    .rbtn.active { background:linear-gradient(180deg,#ff4da6,#c2185b); color:#fff; }
+
+    /* Small helper for legacy sidebar (kept hidden visually) */
+    .sidebar { display:none; }
+
+    /* Page loader (full screen) */
+    #page-loader {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      z-index: 99999;
+      box-sizing: border-box;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+    #page-loader .inner { text-align:center; color:#1f2937; font-weight:600; font-size:14px; }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      #sliding-sidebar, #tool-ribbon { transition: none; }
+    }
+
+    /* Responsive adjustments */
     @media (max-width:900px) {
-      .sidebar { width:280px; position:absolute; right:0; top:var(--topbar-height); height: calc(100% - var(--topbar-height) - var(--footer-height)); transform: translateX(0); transition: transform .22s ease; }
-      .sidebar.collapsed { transform: translateX(100%); }
+      #sliding-sidebar { width: 86vw; right: calc(-86vw); }
+      #sliding-sidebar.open { right: 0; }
     }
   </style>
 </head>
 <body>
-  <header class="topbar">
+  <!-- Fullscreen loader -->
+  <div id="page-loader" aria-hidden="false"><div class="inner">Laadin kaarti…</div></div>
+
+  <!-- Topbar kept in DOM but hidden via CSS for accessibility -->
+  <header class="topbar" aria-hidden="true">
     <h1 class="app-title">Orhideeliste kasvualad — Palivere</h1>
     <div class="top-controls">
       <div class="toggle-wrap">
@@ -122,30 +201,71 @@
         </label>
         <span class="label">Katastriosa</span>
       </div>
-      <div id="controls-ui"></div>
+      <div id="controls-ui" aria-hidden="true"></div>
     </div>
   </header>
 
-  <main class="main-area">
-    <div id="map"></div>
+  <main class="main-area" role="main">
+    <div id="map" tabindex="0" role="application" aria-label="Kaart"></div>
 
-    <aside id="sidebar" class="sidebar" role="complementary" aria-labelledby="sidebar-title">
-      <!-- LAYER SWITCHER: kleebi see sidebarisse (enne </aside>) -->
-<div id="layer-switcher" class="layer-switcher" aria-label="Kihtide valik">
-  <h3>Kihtide valik</h3>
-  <label><input type="checkbox" id="ls-osm" checked> <span>Baaskaart (OSM)</span></label><br>
-  <label><input type="checkbox" id="ls-cad"> <span>Katastriosa</span></label><br>
-  <label><input type="checkbox" id="ls-draw" checked> <span>Joonistused</span></label>
-</div>
+    <!-- Branding: inline SVG logo + title (overlay on map) -->
+    <div id="map-branding" aria-hidden="false">
+      <!-- Inline SVG logo -->
+      <svg id="orchid-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="48" height="48" role="img" aria-label="Orhidee logo">
+        <title>Orhidee</title>
+        <g fill="none" stroke="#a3005a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M60 18c6 0 12 4 14 9 2 5 1 10-2 14-3 4-8 6-12 6s-9-2-12-6c-3-4-4-9-2-14 2-5 8-9 14-9z"/>
+          <path d="M60 36c8 0 16 6 20 12 4 6 4 14 0 20-4 6-12 10-20 10s-16-4-20-10c-4-6-4-14 0-20 4-6 12-12 20-12z"/>
+          <path d="M36 44c6-2 12 0 16 4" />
+          <path d="M84 44c-6-2-12 0-16 4" />
+          <path d="M60 56c4 0 8 3 8 6s-4 6-8 6-8-3-8-6 4-6 8-6z"/>
+          <path d="M60 70v12" />
+          <path d="M52 30c-6 6-10 14-10 22" />
+          <path d="M68 30c6 6 10 14 10 22" />
+        </g>
+      </svg>
+      <div id="map-title">Orhideeliste kasvualad — Palivere</div>
+    </div>
 
+    <!-- Data source overlay on map bottom -->
+    <div id="map-source">Andmeallikas: Maa‑ ja Ruumiamet. Kasutamine CC‑BY 4.0 nõuete kohaselt.</div>
+
+    <!-- Sliding sidebar tab and container -->
+    <div id="sidebar-tab" title="Ava külgriba" role="button" tabindex="0">☰</div>
+    <aside id="sliding-sidebar" class="closed" aria-hidden="true">
+      <div class="sidebar-edge" aria-hidden="true"></div>
+      <button id="sidebar-pin" aria-pressed="false" title="Kinnita">📌</button>
+      <div class="sidebar-content" id="sliding-sidebar-content">
+        <!-- layer-switcher placeholder -->
+        <div id="layer-switcher" class="layer-switcher" aria-label="Kihtide valik">
+          <h3>Kihtide valik</h3>
+          <label class="ls-row"><input type="checkbox" id="ls-osm" checked> <span>Baaskaart (OSM)</span></label>
+          <label class="ls-row"><input type="checkbox" id="ls-cad"> <span>Katastriosa</span></label>
+          <label class="ls-row"><input type="checkbox" id="ls-draw" checked> <span>Joonistused</span></label>
+        </div>
+      </div>
     </aside>
+
+    <!-- Ribbon tab and tool buttons -->
+    <div id="ribbon-tab" title="Tööriistad" role="button" tabindex="0">✦</div>
+    <nav id="tool-ribbon" class="hidden" aria-hidden="true">
+      <button id="ribbon-draw" class="rbtn">Joonista</button>
+      <button id="ribbon-modify" class="rbtn">Muuda</button>
+      <button id="ribbon-back" class="rbtn">Tagasi</button>
+      <button id="ribbon-save" class="rbtn">Salvesta</button>
+      <button id="ribbon-load" class="rbtn">Laadi</button>
+      <button id="ribbon-export" class="rbtn">Ekspordi</button>
+      <button id="ribbon-clear" class="rbtn">Kustuta</button>
+    </nav>
+
   </main>
 
-  <footer class="footer">
+  <!-- Footer kept in DOM but hidden visually -->
+  <footer class="footer" aria-hidden="true">
     <small>Andmeallikas: Maa‑ ja Ruumiamet. Kasutamine CC‑BY 4.0 nõuete kohaselt.</small>
   </footer>
 
-  <!-- OpenLayers UMD build (globaalne ol). Fallback to unpkg if jsdelivr blocked. -->
+  <!-- OpenLayers UMD build loader + app init -->
   <script>
     (function loadOl(cb){
       var s = document.createElement('script');
@@ -154,7 +274,7 @@
       s.onload = cb;
       s.onerror = function(){
         var s2 = document.createElement('script');
-        s2.src = 'https://unpkg.com/ol@7.4.0/dist/ol.js';
+        s2.src = 'https://unpkg.com/ol@v7.4.0/dist/ol.js';
         s2.crossOrigin = 'anonymous';
         s2.onload = cb;
         s2.onerror = function(){ console.error('OpenLayers CDN failed to load.'); cb(); };
@@ -164,446 +284,445 @@
     })(initApp);
 
     function initApp(){
-      // Wait a tick to ensure ol is available
-      setTimeout(() => {
-        if (!window.ol) {
-          document.getElementById('sidebar').innerHTML = '<h2>Viga</h2><p>OpenLayers ei laadinud. Kontrolli võrku või CDN‑i.</p>';
-          console.error('OpenLayers not available.');
-          return;
+      // set mobile vh var
+      function setVhVar() { document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px'); }
+      setVhVar(); window.addEventListener('resize', setVhVar);
+
+      // small helpers for sidebar preservation
+      const sidebarEl = document.getElementById('sliding-sidebar-content');
+      function setSidebarHtml(title, html) {
+        // preserve layer-switcher if present
+        const preserved = document.getElementById('layer-switcher');
+        sidebarEl.innerHTML = '';
+        if (preserved) sidebarEl.appendChild(preserved);
+        if (title) {
+          const h = document.createElement('h2'); h.textContent = title; sidebarEl.appendChild(h);
         }
+        const wrapper = document.createElement('div'); wrapper.innerHTML = html || ''; sidebarEl.appendChild(wrapper);
+      }
 
-        // --- Sidebar helpers ---
-        const sidebarEl = document.getElementById('sidebar');
-        // Asendatud setSidebarHtml: säilitab layer-switcher kui see on olemas
-function setSidebarHtml(title, html) {
-  // säilita layer-switcher, kui see on olemas
-  const preserved = sidebarEl.querySelector('#layer-switcher');
-  // puhasta sidebar
-  sidebarEl.innerHTML = '';
-  // lisa tagasi layer-switcher enne sisu, kui see oli olemas
-  if (preserved) sidebarEl.appendChild(preserved);
-  // lisa pealkiri ja sisu
-  if (title) {
-    const h = document.createElement('h2'); h.textContent = title; sidebarEl.appendChild(h);
-  }
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = html || '';
-  sidebarEl.appendChild(wrapper);
-}
+      // If OL failed to load, show error and remove loader
+      if (!window.ol) {
+        console.error('OpenLayers not available.');
+        const loader = document.getElementById('page-loader'); if (loader) loader.remove();
+        return;
+      }
 
-        function showWelcome() {
-          setSidebarHtml('Tere tulemast', '<p>Vali objekt kaardilt või kasuta nuppe joonistamiseks ja salvestamiseks.</p>');
-        }
-        function showFeatureInfo(feature) {
-          const title = feature.get('title') || 'Valitud objekt';
-          const note = feature.get('note') || '';
-          const props = feature.getProperties();
-          let html = `<p>${escapeHtml(note)}</p><dl>`;
-          for (const k in props) {
-            if (k === 'geometry') continue;
-            html += `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(String(props[k]))}</dd>`;
-          }
-          html += '</dl>';
-          setSidebarHtml(title, html);
-        }
-        function escapeHtml(s=''){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); }
+      // --- Map init ---
+      const view = new ol.View({
+        center: ol.proj.fromLonLat([24.0, 58.9]),
+        zoom: 12
+      });
 
-        // Add close button
-        if (!sidebarEl.querySelector('.sidebar-close')) {
-          const btn = document.createElement('button');
-          btn.className = 'sidebar-close'; btn.innerHTML = '&times;'; btn.title = 'Sulge';
-          btn.addEventListener('click', () => sidebarEl.classList.toggle('collapsed'));
-          sidebarEl.prepend(btn);
-        }
+      const osm = new ol.layer.Tile({ source: new ol.source.OSM(), zIndex:0 });
+      const cadastral = new ol.layer.Image({
+        source: new ol.source.ImageWMS({
+          url: 'https://kaart.maaamet.ee/wms/alus',
+          params: { LAYERS: 'BAASKAART', FORMAT: 'image/png', TRANSPARENT: true, VERSION: '1.3.0' },
+          crossOrigin: 'anonymous'
+        }),
+        visible: false,
+        zIndex: 500
+      });
 
-        showWelcome();
+      const drawSource = new ol.source.Vector();
+      const drawLayer = new ol.layer.Vector({
+        source: drawSource,
+        style: new ol.style.Style({
+          fill: new ol.style.Fill({ color: 'rgba(255,165,0,0.25)' }),
+          stroke: new ol.style.Stroke({ color: '#ff8c00', width: 2 }),
+          image: new ol.style.Circle({ radius:6, fill: new ol.style.Fill({ color:'#ff8c00' }) })
+        }),
+        zIndex: 1000,
+        visible: true
+      });
 
-        // --- Map init ---
-        const view = new ol.View({
-          center: ol.proj.fromLonLat([24.0, 58.9]),
-          zoom: 12
-        });
+      const map = new ol.Map({
+        target: 'map',
+        layers: [osm, cadastral, drawLayer],
+        view: view,
+        controls: []
+      });
 
-        const osm = new ol.layer.Tile({ source: new ol.source.OSM(), zIndex:0 });
-        // Katastriosa WMS (näide). Kui server CORSiga ei luba, võib see jääda tühjaks.
-        const cadastral = new ol.layer.Image({
-          source: new ol.source.ImageWMS({
-            url: 'https://kaart.maaamet.ee/wms/alus',
-            params: { LAYERS: 'BAASKAART', FORMAT: 'image/png', TRANSPARENT: true, VERSION: '1.3.0' },
-            crossOrigin: 'anonymous'
-          }),
-          visible: false,
-          zIndex: 500
-        });
+      // Add controls
+      map.addControl(new ol.control.Zoom());
+      map.addControl(new ol.control.FullScreen());
+      map.addControl(new ol.control.Rotate({ autoHide: true }));
+      map.addControl(new ol.control.ScaleLine({ units: 'metric' }));
+      map.addControl(new ol.control.Attribution({ collapsible: true }));
 
-        // Draw layer
-        const drawSource = new ol.source.Vector();
-        const drawLayer = new ol.layer.Vector({
-          source: drawSource,
-          style: new ol.style.Style({
-            fill: new ol.style.Fill({ color: 'rgba(255,165,0,0.25)' }),
-            stroke: new ol.style.Stroke({ color: '#ff8c00', width: 2 }),
-            image: new ol.style.Circle({ radius:6, fill: new ol.style.Fill({ color:'#ff8c00' }) })
-          }),
-          zIndex: 1000,
-          visible: true
-        });
+      // --- Drawing interactions ---
+      let drawInteraction = null;
+      let modifyInteraction = null;
+      let snapInteraction = null;
 
-        const map = new ol.Map({
-          target: 'map',
-          layers: [osm, cadastral, drawLayer],
-          view: view,
-          controls: [] // add controls manually
-        });
-                // Add controls manually (avoid ol.control.defaults issues)
-        map.addControl(new ol.control.Zoom());
-        map.addControl(new ol.control.FullScreen());
-        map.addControl(new ol.control.Rotate({ autoHide: true }));
-        map.addControl(new ol.control.ScaleLine({ units: 'metric' }));
-        map.addControl(new ol.control.Attribution({ collapsible: true }));
-
-        // --- Drawing interactions ---
-        let drawInteraction = null;
-        let modifyInteraction = null;
-        let snapInteraction = null;
-
-        function enableDraw(type='Polygon') {
-          disableInteractions();
-          if (type === 'Modify') {
-            modifyInteraction = new ol.interaction.Modify({ source: drawSource });
-            map.addInteraction(modifyInteraction);
-            snapInteraction = new ol.interaction.Snap({ source: drawSource });
-            map.addInteraction(snapInteraction);
-            return;
-          }
-          drawInteraction = new ol.interaction.Draw({ source: drawSource, type: type });
-          map.addInteraction(drawInteraction);
+      function enableDraw(type='Polygon') {
+        disableInteractions();
+        if (type === 'Modify') {
           modifyInteraction = new ol.interaction.Modify({ source: drawSource });
           map.addInteraction(modifyInteraction);
           snapInteraction = new ol.interaction.Snap({ source: drawSource });
           map.addInteraction(snapInteraction);
-
-          drawInteraction.on('drawend', (evt) => {
-            const f = evt.feature;
-            f.setId('f-' + Date.now());
-            f.set('createdAt', new Date().toISOString());
-            f.set('title', f.get('title') || 'Märk');
-            f.set('note', f.get('note') || '');
-            // prompt for note (simple)
-            setTimeout(() => {
-              const note = prompt('Sisesta märge valitud alale:', f.get('note') || '');
-              if (note !== null) f.set('note', note);
-              saveToLocal();
-            }, 50);
-          });
+          return;
         }
+        drawInteraction = new ol.interaction.Draw({ source: drawSource, type: type });
+        map.addInteraction(drawInteraction);
+        modifyInteraction = new ol.interaction.Modify({ source: drawSource });
+        map.addInteraction(modifyInteraction);
+        snapInteraction = new ol.interaction.Snap({ source: drawSource });
+        map.addInteraction(snapInteraction);
 
-        function disableInteractions() {
-          if (drawInteraction) map.removeInteraction(drawInteraction);
-          if (modifyInteraction) map.removeInteraction(modifyInteraction);
-          if (snapInteraction) map.removeInteraction(snapInteraction);
-          drawInteraction = modifyInteraction = snapInteraction = null;
-        }
+        drawInteraction.on('drawend', (evt) => {
+          const f = evt.feature;
+          f.setId('f-' + Date.now());
+          f.set('createdAt', new Date().toISOString());
+          f.set('title', f.get('title') || 'Märk');
+          f.set('note', f.get('note') || '');
+          setTimeout(() => {
+            const note = prompt('Sisesta märge valitud alale:', f.get('note') || '');
+            if (note !== null) f.set('note', note);
+            saveToLocal();
+          }, 50);
+        });
+      }
 
-        // --- Persistence (localStorage) ---
-        const GEO_KEY = 'orhideed_features_v1';
-        const format = new ol.format.GeoJSON();
+      function disableInteractions() {
+        if (drawInteraction) map.removeInteraction(drawInteraction);
+        if (modifyInteraction) map.removeInteraction(modifyInteraction);
+        if (snapInteraction) map.removeInteraction(snapInteraction);
+        drawInteraction = modifyInteraction = snapInteraction = null;
+      }
 
-        function saveToLocal() {
+      // --- Persistence (localStorage) ---
+      const GEO_KEY = 'orhideed_features_v1';
+      const format = new ol.format.GeoJSON();
+
+      function saveToLocal() {
+        try {
+          const geojson = format.writeFeatures(drawSource.getFeatures(), { featureProjection: 'EPSG:3857' });
+          localStorage.setItem(GEO_KEY, geojson);
+          flashMessage('Salvestatud localStorage\'i');
+        } catch (e) { console.error('Save failed', e); flashMessage('Salvestus ebaõnnestus'); }
+      }
+
+      function loadFromLocal() {
+        try {
+          const data = localStorage.getItem(GEO_KEY);
+          if (!data) { flashMessage('LocalStorage tühi'); return; }
+          const feats = format.readFeatures(data, { featureProjection: 'EPSG:3857' });
+          drawSource.clear();
+          drawSource.addFeatures(feats);
+          flashMessage('Laetud localStorage\'ist');
+        } catch (e) { console.error('Load failed', e); flashMessage('Laadimine ebaõnnestus'); }
+      }
+
+      function exportGeoJSON() {
+        try {
+          const geojson = format.writeFeatures(drawSource.getFeatures(), { featureProjection: 'EPSG:3857' });
+          const blob = new Blob([geojson], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'features.geojson';
+          document.body.appendChild(a); a.click(); a.remove();
+          URL.revokeObjectURL(url);
+        } catch (e) { console.error(e); flashMessage('Eksport ebaõnnestus'); }
+      }
+
+      function importGeoJSONFile(file) {
+        const reader = new FileReader();
+        reader.onload = () => {
           try {
-            const geojson = format.writeFeatures(drawSource.getFeatures(), { featureProjection: 'EPSG:3857' });
-            localStorage.setItem(GEO_KEY, geojson);
-            flashMessage('Salvestatud localStorage\'i');
-          } catch (e) { console.error('Save failed', e); flashMessage('Salvestus ebaõnnestus'); }
-        }
-
-        function loadFromLocal() {
-          try {
-            const data = localStorage.getItem(GEO_KEY);
-            if (!data) { flashMessage('LocalStorage tühi'); return; }
-            const feats = format.readFeatures(data, { featureProjection: 'EPSG:3857' });
-            drawSource.clear();
+            const feats = format.readFeatures(reader.result, { featureProjection: 'EPSG:3857' });
             drawSource.addFeatures(feats);
-            flashMessage('Laetud localStorage\'ist');
-          } catch (e) { console.error('Load failed', e); flashMessage('Laadimine ebaõnnestus'); }
-        }
+            saveToLocal();
+            flashMessage('Imporditud GeoJSON');
+          } catch (e) { console.error(e); flashMessage('Import ebaõnnestus'); }
+        };
+        reader.readAsText(file);
+      }
 
-        function exportGeoJSON() {
-          try {
-            const geojson = format.writeFeatures(drawSource.getFeatures(), { featureProjection: 'EPSG:3857' });
-            const blob = new Blob([geojson], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = 'features.geojson';
-            document.body.appendChild(a); a.click(); a.remove();
-            URL.revokeObjectURL(url);
-          } catch (e) { console.error(e); flashMessage('Eksport ebaõnnestus'); }
-        }
+      // --- UI controls (ribbon) wiring ---
+      // Ribbon buttons are in DOM; connect them to functions
+      document.getElementById('ribbon-draw')?.addEventListener('click', () => {
+        enableDraw('Polygon');
+        document.querySelectorAll('#tool-ribbon .rbtn').forEach(b => b.classList.remove('active'));
+        document.getElementById('ribbon-draw').classList.add('active');
+      });
+      document.getElementById('ribbon-modify')?.addEventListener('click', () => {
+        enableDraw('Modify');
+        document.querySelectorAll('#tool-ribbon .rbtn').forEach(b => b.classList.remove('active'));
+        document.getElementById('ribbon-modify').classList.add('active');
+      });
+      document.getElementById('ribbon-save')?.addEventListener('click', () => { saveToLocal(); });
+      document.getElementById('ribbon-load')?.addEventListener('click', () => { loadFromLocal(); });
+      document.getElementById('ribbon-export')?.addEventListener('click', () => { exportGeoJSON(); });
+      document.getElementById('ribbon-clear')?.addEventListener('click', () => {
+        if (confirm('Kustutada kõik joonised?')) { drawSource.clear(); saveToLocal(); flashMessage('Kustutatud'); }
+      });
 
-        function importGeoJSONFile(file) {
-          const reader = new FileReader();
-          reader.onload = () => {
-            try {
-              const feats = format.readFeatures(reader.result, { featureProjection: 'EPSG:3857' });
-              drawSource.addFeatures(feats);
-              saveToLocal();
-              flashMessage('Imporditud GeoJSON');
-            } catch (e) { console.error(e); flashMessage('Import ebaõnnestus'); }
-          };
-          reader.readAsText(file);
-        }
+      // Tagasi (undo) — lihtne: eemalda viimane lisatud feature
+      document.getElementById('ribbon-back')?.addEventListener('click', () => {
+        const feats = drawSource.getFeatures();
+        if (!feats || feats.length === 0) { flashMessage('Pole tagastatavat tegevust'); return; }
+        const last = feats[feats.length - 1];
+        drawSource.removeFeature(last);
+        saveToLocal();
+        flashMessage('Tagasi: viimane tegevus eemaldatud');
+      });
 
-        // --- UI controls (topbar) ---
-        const controlsUi = document.getElementById('controls-ui');
-        controlsUi.innerHTML = `
-          <div id="btns">
-            <button id="btn-draw">Joonista</button>
-            <button id="btn-modify">Muuda</button>
-            <button id="btn-save">Salvesta</button>
-            <button id="btn-load">Laadi</button>
-            <button id="btn-export">Ekspordi</button>
-            <button id="btn-clear">Kustuta</button>
-            <input id="file-input" type="file" accept=".geojson,application/json" style="display:none" />
+      // --- Map click to show feature info in sidebar ---
+      function escapeHtml(s=''){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); }
+      function showWelcome() {
+        setSidebarHtml('Tere tulemast', '<p>Vali objekt kaardilt või kasuta nuppe joonistamiseks ja salvestamiseks.</p>');
+      }
+      function showFeatureInfo(feature) {
+        const title = feature.get('title') || 'Valitud objekt';
+        const note = feature.get('note') || '';
+        const props = feature.getProperties();
+        let html = `<p>${escapeHtml(note)}</p><dl>`;
+        for (const k in props) {
+          if (k === 'geometry') continue;
+          html += `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(String(props[k]))}</dd>`;
+        }
+        html += '</dl>';
+        setSidebarHtml(title, html);
+      }
+
+      map.on('singleclick', (evt) => {
+        const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f);
+        if (feature) showFeatureInfo(feature); else showWelcome();
+      });
+
+      // --- Layer switcher init (preserve checkboxes) ---
+      function initLayerSwitcher(osmLayer, cadastralLayer, drawLayerObj) {
+        const lsOsm = document.getElementById('ls-osm');
+        const lsCad = document.getElementById('ls-cad');
+        const lsDraw = document.getElementById('ls-draw');
+        if (!lsOsm || !lsCad || !lsDraw) return;
+        try {
+          lsOsm.checked = typeof osmLayer.getVisible === 'function' ? osmLayer.getVisible() : true;
+          lsCad.checked = typeof cadastralLayer.getVisible === 'function' ? cadastralLayer.getVisible() : false;
+          lsDraw.checked = typeof drawLayerObj.getVisible === 'function' ? drawLayerObj.getVisible() : true;
+        } catch(e){}
+        lsOsm.addEventListener('change', (e) => { try { osmLayer.setVisible(!!e.target.checked); } catch (err) {} });
+        lsCad.addEventListener('change', (e) => { try { cadastralLayer.setVisible(!!e.target.checked); } catch (err) {} });
+        lsDraw.addEventListener('change', (e) => { try { drawLayerObj.setVisible(!!e.target.checked); } catch (err) {} });
+      }
+      initLayerSwitcher(osm, cadastral, drawLayer);
+
+      // --- Safe layer visibility persistence and listeners ---
+      function saveLayerVisibility() {
+        try {
+          const lsOsm = document.getElementById('ls-osm');
+          const lsCad = document.getElementById('ls-cad');
+          const lsDraw = document.getElementById('ls-draw');
+          const state = { osm: !!(lsOsm && lsOsm.checked), cad: !!(lsCad && lsCad.checked), draw: !!(lsDraw && lsDraw.checked) };
+          localStorage.setItem('layer_visibility', JSON.stringify(state));
+        } catch (e) { console.warn('saveLayerVisibility error', e); }
+      }
+      function restoreLayerVisibility(osmL, cadL, drawL) {
+        try {
+          const saved = localStorage.getItem('layer_visibility'); if (!saved) return;
+          const s = JSON.parse(saved);
+          if (s.osm !== undefined && osmL && typeof osmL.setVisible === 'function') osmL.setVisible(!!s.osm);
+          if (s.cad !== undefined && cadL && typeof cadL.setVisible === 'function') cadL.setVisible(!!s.cad);
+          if (s.draw !== undefined && drawL && typeof drawL.setVisible === 'function') drawL.setVisible(!!s.draw);
+          const lsOsm = document.getElementById('ls-osm'); const lsCad = document.getElementById('ls-cad'); const lsDraw = document.getElementById('ls-draw');
+          if (lsOsm) lsOsm.checked = osmL.getVisible();
+          if (lsCad) lsCad.checked = cadL.getVisible();
+          if (lsDraw) lsDraw.checked = drawL.getVisible();
+        } catch (e) { console.warn('restoreLayerVisibility error', e); }
+      }
+      (function attachLayerSwitcherListeners() {
+        const lsOsm = document.getElementById('ls-osm');
+        const lsCad = document.getElementById('ls-cad');
+        const lsDraw = document.getElementById('ls-draw');
+        if (!lsOsm || !lsCad || !lsDraw) { setTimeout(attachLayerSwitcherListeners, 120); return; }
+        lsOsm.addEventListener('change', () => { try { osm.setVisible(!!lsOsm.checked); saveLayerVisibility(); } catch(e){} });
+        lsCad.addEventListener('change', () => { try { cadastral.setVisible(!!lsCad.checked); saveLayerVisibility(); } catch(e){} });
+        lsDraw.addEventListener('change', () => { try { drawLayer.setVisible(!!lsDraw.checked); saveLayerVisibility(); } catch(e){} });
+        restoreLayerVisibility(osm, cadastral, drawLayer);
+      })();
+
+      // --- Popup overlay for editing attributes ---
+      const overlayEl = document.createElement('div');
+      overlayEl.className = 'attr-popup';
+      const overlay = new ol.Overlay({ element: overlayEl, autoPan: true, autoPanAnimation: { duration: 200 } });
+      map.addOverlay(overlay);
+
+      map.on('dblclick', (evt) => {
+        const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f);
+        if (!feature) return;
+        const coord = evt.coordinate;
+        overlay.setPosition(coord);
+        overlayEl.innerHTML = `
+          <label for="note">Märge</label>
+          <textarea id="note">${escapeHtml(feature.get('note')||'')}</textarea>
+          <div style="margin-top:8px;display:flex;gap:8px;">
+            <button id="save-note">Salvesta</button>
+            <button id="cancel-note">Tühista</button>
           </div>
         `;
-
-        document.getElementById('btn-draw').addEventListener('click', () => {
-          enableDraw('Polygon');
-          toggleActive('btn-draw');
-          document.getElementById('btn-modify').classList.remove('active');
+        document.getElementById('save-note').addEventListener('click', () => {
+          const val = document.getElementById('note').value;
+          feature.set('note', val);
+          saveToLocal();
+          overlay.setPosition(undefined);
+          showFeatureInfo(feature);
         });
+        document.getElementById('cancel-note').addEventListener('click', () => overlay.setPosition(undefined));
+      });
 
-        document.getElementById('btn-modify').addEventListener('click', () => {
-          const el = document.getElementById('btn-modify');
-          const active = el.classList.toggle('active');
-          if (active) { enableDraw('Modify'); document.getElementById('btn-draw').classList.remove('active'); }
-          else disableInteractions();
-        });
-
-        document.getElementById('btn-save').addEventListener('click', () => { saveToLocal(); });
-        document.getElementById('btn-load').addEventListener('click', () => { loadFromLocal(); });
-        document.getElementById('btn-export').addEventListener('click', () => { exportGeoJSON(); });
-        document.getElementById('btn-clear').addEventListener('click', () => {
-          if (confirm('Kustutada kõik joonised?')) { drawSource.clear(); saveToLocal(); }
-        });
-
-        const fileInput = document.getElementById('file-input');
-        fileInput.addEventListener('change', (ev) => {
-          const f = ev.target.files[0];
-          if (f) importGeoJSONFile(f);
-          fileInput.value = '';
-        });
-
-        // small helper to toggle active class
-        function toggleActive(id) {
-          const btns = ['btn-draw','btn-modify'];
-          btns.forEach(b => { const el = document.getElementById(b); if (el) el.classList.remove('active'); });
-          const el = document.getElementById(id); if (el) el.classList.add('active');
+      // --- Small toast / flash message ---
+      let flashTimer = null;
+      function flashMessage(msg, ms=1400) {
+        clearTimeout(flashTimer);
+        const elId = '__flash_msg';
+        let el = document.getElementById(elId);
+        if (!el) {
+          el = document.createElement('div'); el.id = elId;
+          el.style.position = 'absolute'; el.style.left = '12px'; el.style.bottom = '12px';
+          el.style.padding = '8px 12px'; el.style.background = 'rgba(0,0,0,0.7)'; el.style.color = '#fff';
+          el.style.borderRadius = '6px'; el.style.zIndex = 9999; document.body.appendChild(el);
         }
+        el.textContent = msg; el.style.display = 'block';
+        flashTimer = setTimeout(() => { el.style.display = 'none'; }, ms);
+      }
 
-        // --- Map click to show feature info in sidebar ---
-        map.on('singleclick', (evt) => {
-          const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f);
-          if (feature) {
-            showFeatureInfo(feature);
-          } else {
-            showWelcome();
-          }
-        });
+      // --- Keyboard shortcuts ---
+      window.addEventListener('keydown', (ev) => {
+        if (ev.key === 'd') { enableDraw('Polygon'); document.getElementById('ribbon-draw').classList.add('active'); }
+        if (ev.key === 'm') { enableDraw('Modify'); document.getElementById('ribbon-modify').classList.add('active'); }
+        if (ev.key === 'Escape') { disableInteractions(); document.getElementById('ribbon-draw').classList.remove('active'); document.getElementById('ribbon-modify').classList.remove('active'); }
+      });
 
-        // --- Toggle cadastral WMS ---
-        const toggle = document.getElementById('toggle-cadastral');
-        toggle.checked = cadastral.getVisible();
-        toggle.addEventListener('change', (ev) => cadastral.setVisible(!!ev.target.checked));
+      // Prevent default double-click zoom so our dblclick works for editing
+      map.getInteractions().forEach(i => {
+        if (i instanceof ol.interaction.DoubleClickZoom) map.removeInteraction(i);
+      });
 
-        // --- Layer switcher init (kleepi see toggle ploki järel, enne overlay loomist) ---
-        function initLayerSwitcher(osm, cadastral, drawLayer) {
-          const lsOsm = document.getElementById('ls-osm');
-          const lsCad = document.getElementById('ls-cad');
-          const lsDraw = document.getElementById('ls-draw');
+      console.info('Kaart initsialiseeritud (UMD).');
 
-          if (!lsOsm || !lsCad || !lsDraw) {
-            console.warn('Layer switcher DOM elemendid puuduvad. Kontrolli, et HTML on sidebaris enne skripti.');
-            return;
-          }
-          if (!osm || !cadastral || !drawLayer) {
-            console.warn('Layer objekt(id) puuduvad. Kutsu initLayerSwitcher alles pärast kihtide loomist.');
-            return;
-          }
+      // --- Sidebar & ribbon behavior + audio unlock ---
+      const sidebarTab = document.getElementById('sidebar-tab');
+      const slidingSidebar = document.getElementById('sliding-sidebar');
+      const sidebarPin = document.getElementById('sidebar-pin');
+      const ribbonTab = document.getElementById('ribbon-tab');
+      const toolRibbon = document.getElementById('tool-ribbon');
 
-          // Sünkroniseeri algse nähtavusega
-          try {
-            lsOsm.checked = typeof osm.getVisible === 'function' ? osm.getVisible() : true;
-            lsCad.checked = typeof cadastral.getVisible === 'function' ? cadastral.getVisible() : false;
-            lsDraw.checked = typeof drawLayer.getVisible === 'function' ? drawLayer.getVisible() : true;
-          } catch (e) {
-            console.warn('Ei saanud sünkroniseerida layer nähtavust:', e);
-          }
+      let sidebarPinned = false;
+      let _audioUnlocked = false;
 
-          // Kuulajad: checkbox -> layer
-          lsOsm.addEventListener('change', (e) => { try { osm.setVisible(!!e.target.checked); } catch (err) { console.error(err); } });
-          lsCad.addEventListener('change', (e) => { try { cadastral.setVisible(!!e.target.checked); } catch (err) { console.error(err); } });
-          lsDraw.addEventListener('change', (e) => { try { drawLayer.setVisible(!!e.target.checked); } catch (err) { console.error(err); } });
+      function playClickSound() {
+        try {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (!Ctx) return;
+          const ctx = new Ctx();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine'; o.frequency.value = 880;
+          g.gain.value = 0.0009;
+          o.connect(g); g.connect(ctx.destination);
+          o.start();
+          setTimeout(()=>{ o.stop(); try{ ctx.close(); }catch(e){} }, 60);
+        } catch(e){ /* ignore */ }
+      }
 
-          // Kui kihid muutuvad mujal, uuenda checkboxe
-          if (typeof osm.on === 'function') osm.on('change:visible', () => { lsOsm.checked = osm.getVisible(); });
-          if (typeof cadastral.on === 'function') cadastral.on('change:visible', () => { lsCad.checked = cadastral.getVisible(); });
-          if (typeof drawLayer.on === 'function') drawLayer.on('change:visible', () => { lsDraw.checked = drawLayer.getVisible(); });
-        }
-
-        // Kutsu initLayerSwitcher SIIN (pärast map ja kihte on loodud)
-        initLayerSwitcher(osm, cadastral, drawLayer);
-
-        // --- Safe layer visibility persistence and listeners (paste after initLayerSwitcher(...) call) ---
-        function saveLayerVisibility() {
-          try {
-            const lsOsm = document.getElementById('ls-osm');
-            const lsCad = document.getElementById('ls-cad');
-            const lsDraw = document.getElementById('ls-draw');
-            const state = {
-              osm: !!(lsOsm && lsOsm.checked),
-              cad: !!(lsCad && lsCad.checked),
-              draw: !!(lsDraw && lsDraw.checked)
+      function unlockAudio() {
+        if (_audioUnlocked) return;
+        try {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (!Ctx) { _audioUnlocked = true; return; }
+          const ctx = new Ctx();
+          if (ctx.state === 'suspended') {
+            const resume = () => {
+              ctx.resume().catch(()=>{}).finally(() => {
+                _audioUnlocked = true;
+                window.removeEventListener('click', resume, true);
+                window.removeEventListener('touchstart', resume, true);
+                window.removeEventListener('keydown', resume, true);
+              });
             };
-            localStorage.setItem('layer_visibility', JSON.stringify(state));
-          } catch (e) { console.warn('saveLayerVisibility error', e); }
-        }
-
-        function restoreLayerVisibility(osm, cadastral, drawLayer) {
-          try {
-            const saved = localStorage.getItem('layer_visibility');
-            if (!saved) return;
-            const s = JSON.parse(saved);
-            if (s.osm !== undefined && osm && typeof osm.setVisible === 'function') osm.setVisible(!!s.osm);
-            if (s.cad !== undefined && cadastral && typeof cadastral.setVisible === 'function') cadastral.setVisible(!!s.cad);
-            if (s.draw !== undefined && drawLayer && typeof drawLayer.setVisible === 'function') drawLayer.setVisible(!!s.draw);
-            // sync checkboxes with actual layer visibility
-            const lsOsm = document.getElementById('ls-osm');
-            const lsCad = document.getElementById('ls-cad');
-            const lsDraw = document.getElementById('ls-draw');
-            if (lsOsm) lsOsm.checked = osm.getVisible();
-            if (lsCad) lsCad.checked = cadastral.getVisible();
-            if (lsDraw) lsDraw.checked = drawLayer.getVisible();
-          } catch (e) { console.warn('restoreLayerVisibility error', e); }
-        }
-
-        (function attachLayerSwitcherListeners() {
-          const lsOsm = document.getElementById('ls-osm');
-          const lsCad = document.getElementById('ls-cad');
-          const lsDraw = document.getElementById('ls-draw');
-          if (!lsOsm || !lsCad || !lsDraw) {
-            // elemente pole DOMis veel — proovi uuesti veidi hiljem
-            setTimeout(attachLayerSwitcherListeners, 120);
-            return;
+            window.addEventListener('click', resume, { capture: true, passive: true });
+            window.addEventListener('touchstart', resume, { capture: true, passive: true });
+            window.addEventListener('keydown', resume, { capture: true, passive: true });
+          } else {
+            _audioUnlocked = true;
           }
+          setTimeout(()=>{ try{ ctx.close(); }catch(e){} }, 500);
+        } catch(e){ _audioUnlocked = true; }
+      }
 
-          lsOsm.addEventListener('change', () => {
-            try { osm.setVisible(!!lsOsm.checked); saveLayerVisibility(); } catch(e){ console.error(e); }
-          });
-          lsCad.addEventListener('change', () => {
-            try { cadastral.setVisible(!!lsCad.checked); saveLayerVisibility(); } catch(e){ console.error(e); }
-          });
-          lsDraw.addEventListener('change', () => {
-            try { drawLayer.setVisible(!!lsDraw.checked); saveLayerVisibility(); } catch(e){ console.error(e); }
-          });
+      function openSidebar() {
+        slidingSidebar.classList.add('open');
+        slidingSidebar.setAttribute('aria-hidden','false');
+        playClickSound();
+      }
+      function closeSidebar() {
+        if (sidebarPinned) return;
+        slidingSidebar.classList.remove('open');
+        slidingSidebar.setAttribute('aria-hidden','true');
+      }
 
-          // taastame salvestatud seisu kohe
-          restoreLayerVisibility(osm, cadastral, drawLayer);
-        })();
+      sidebarTab.addEventListener('click', () => {
+        unlockAudio();
+        slidingSidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+      });
+      sidebarTab.addEventListener('mouseenter', openSidebar);
+      slidingSidebar.addEventListener('mouseleave', () => { if (!sidebarPinned) closeSidebar(); });
 
-        // --- Popup overlay for editing attributes (optional) ---
-        const overlayEl = document.createElement('div');
-        overlayEl.className = 'attr-popup';
-        const overlay = new ol.Overlay({ element: overlayEl, autoPan: true, autoPanAnimation: { duration: 200 } });
-        map.addOverlay(overlay);
+      sidebarPin.addEventListener('click', () => {
+        sidebarPinned = !sidebarPinned;
+        sidebarPin.setAttribute('aria-pressed', String(sidebarPinned));
+        if (!sidebarPinned) closeSidebar();
+      });
 
-        // Double click on feature to edit note
-        map.on('dblclick', (evt) => {
-          const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f);
-          if (!feature) return;
-          const coord = evt.coordinate;
-          overlay.setPosition(coord);
-          overlayEl.innerHTML = `
-            <label for="note">Märge</label>
-            <textarea id="note">${escapeHtml(feature.get('note')||'')}</textarea>
-            <div style="margin-top:8px;display:flex;gap:8px;">
-              <button id="save-note">Salvesta</button>
-              <button id="cancel-note">Tühista</button>
-            </div>
-          `;
-          document.getElementById('save-note').addEventListener('click', () => {
-            const val = document.getElementById('note').value;
-            feature.set('note', val);
-            saveToLocal();
-            overlay.setPosition(undefined);
-            showFeatureInfo(feature);
-          });
-          document.getElementById('cancel-note').addEventListener('click', () => overlay.setPosition(undefined));
-        });
-
-        // --- Small toast / flash message ---
-        let flashTimer = null;
-        function flashMessage(msg, ms=1400) {
-          clearTimeout(flashTimer);
-          const elId = '__flash_msg';
-          let el = document.getElementById(elId);
-          if (!el) {
-            el = document.createElement('div'); el.id = elId;
-            el.style.position = 'absolute'; el.style.left = '12px'; el.style.bottom = '12px';
-            el.style.padding = '8px 12px'; el.style.background = 'rgba(0,0,0,0.7)'; el.style.color = '#fff';
-            el.style.borderRadius = '6px'; el.style.zIndex = 9999; document.body.appendChild(el);
-          }
-          el.textContent = msg; el.style.display = 'block';
-          flashTimer = setTimeout(() => { el.style.display = 'none'; }, ms);
+      // ribbon toggle with collision avoidance
+      function openRibbon() {
+        const sidebarOpen = slidingSidebar.classList.contains('open');
+        if (sidebarOpen) {
+          toolRibbon.style.right = (slidingSidebar.offsetWidth + 16) + 'px';
+        } else {
+          toolRibbon.style.right = '12px';
         }
+        toolRibbon.classList.remove('hidden');
+        toolRibbon.setAttribute('aria-hidden','false');
+      }
+      function closeRibbon() {
+        toolRibbon.classList.add('hidden');
+        toolRibbon.setAttribute('aria-hidden','true');
+        toolRibbon.style.right = '12px';
+      }
 
-        // --- Auto-load saved features on start ---
-        try { loadFromLocal(); } catch (e) { /* ignore */ }
+      ribbonTab.addEventListener('click', () => {
+        unlockAudio();
+        if (toolRibbon.classList.contains('hidden')) { openRibbon(); playClickSound(); }
+        else { closeRibbon(); playClickSound(); }
+      });
 
-        // --- Keyboard shortcuts ---
-        window.addEventListener('keydown', (ev) => {
-          if (ev.key === 'd') { enableDraw('Polygon'); toggleActive('btn-draw'); }
-          if (ev.key === 'm') { enableDraw('Modify'); document.getElementById('btn-modify').classList.add('active'); }
-          if (ev.key === 'Escape') { disableInteractions(); document.getElementById('btn-draw').classList.remove('active'); document.getElementById('btn-modify').classList.remove('active'); }
-        });
+      // swipe to close for sidebar
+      let touchStartX = null;
+      slidingSidebar.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+      slidingSidebar.addEventListener('touchend', (e) => {
+        if (!touchStartX) return;
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        if (dx < -40 && !sidebarPinned) closeSidebar();
+        touchStartX = null;
+      });
 
-        // Prevent default double-click zoom so our dblclick works for editing
-        map.getInteractions().forEach(i => {
-          if (i instanceof ol.interaction.DoubleClickZoom) map.removeInteraction(i);
-        });
+      // remove loader when map rendered
+      map.once('rendercomplete', () => {
+        setTimeout(() => {
+          const loader = document.getElementById('page-loader');
+          if (loader) { loader.style.transition='opacity 220ms'; loader.style.opacity='0'; setTimeout(()=>loader.remove(),240); }
+        }, 120);
+      });
 
-        console.info('Kaart initsialiseeritud (UMD).');
-      }, 50);
-    }
-  
-  // Aseta --vh muutuja, et vältida 100vh probleeme mobiilides (aadressiriba)
-function setVhVar() {
-  document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
-}
-setVhVar();
-window.addEventListener('resize', setVhVar);
-
-// Eemalda loader kui kõik on valmis. Kui tahad oodata kaardi initsialiseerimist,
-// kutsu removeLoader() peale map initsialiseerimist (näiteks pärast console.info('Kaart initsialiseeritud')).
-function removeLoader() {
-  const loader = document.getElementById('page-loader');
-  if (!loader) return;
-  loader.style.transition = 'opacity 220ms ease';
-  loader.style.opacity = '0';
-  setTimeout(() => { loader.remove(); }, 240);
-}
-
-// Kui tahad eemaldada loaderi automaatselt lehe laadimisel:
-window.addEventListener('load', () => {
-  // väike viivitus, et kõik ressursid jõuaksid valmis
-  setTimeout(removeLoader, 120);
-});
-
-// Alternatiiv: kui soovid eemaldada loaderi alles siis, kui kaart on initsialiseeritud,
-// kutsu removeLoader() otse oma initApp / kaart initsialiseerimise lõpus.
- </script>
+    } // end initApp
+  </script>
 </body>
 </html>
+
 
 
 
