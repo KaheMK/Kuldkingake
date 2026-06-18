@@ -808,6 +808,46 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
           if (loader) { loader.style.transition='opacity 220ms'; loader.style.opacity='0'; setTimeout(()=>loader.remove(),240); }
         }, 120);
       });
+// Turvaline modal handler (paigalda initApp sees PÄRAST DOM elementide loomist)
+(function setupAdminModal(){
+  const logo = document.getElementById('orchid-logo-svg');
+  const adminModal = document.getElementById('admin-modal');
+  const adminClose = document.getElementById('admin-close');
+
+  if (!logo || !adminModal) return;
+
+  // Veendu, et modal on body all (väldib kaardi renderi eemaldamist)
+  if (adminModal.parentElement !== document.body) document.body.appendChild(adminModal);
+// tagame, et modal on kõige peal
+adminModal.style.zIndex = 99999;
+if (adminModal.parentElement !== document.body) document.body.appendChild(adminModal);
+adminModal.classList.add('open');
+
+  function openModal(e){
+    e && e.stopPropagation();
+    adminModal.classList.add('open');
+    adminModal.setAttribute('aria-hidden','false');
+    // väldi innerHTML uuesti kirjutamist — ainult näita modalit
+    const focusable = adminModal.querySelector('button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])');
+    if (focusable) focusable.focus();
+  }
+  function closeModal(){
+    adminModal.classList.remove('open');
+    adminModal.setAttribute('aria-hidden','true');
+  }
+
+  // Eemalda vana handler, kui on, ja lisa uus (väldib topelt‑listenerit)
+  try { if (logo._adminClickHandler) logo.removeEventListener('click', logo._adminClickHandler); } catch(e){}
+  logo._adminClickHandler = openModal;
+  logo.addEventListener('click', openModal);
+
+  if (adminClose) adminClose.addEventListener('click', closeModal);
+  adminModal.addEventListener('click', (ev)=>{ if (ev.target === adminModal) closeModal(); });
+
+  // Esc sulgeb modal
+  window.addEventListener('keydown', (ev)=>{ if (ev.key === 'Escape' && adminModal.classList.contains('open')) closeModal(); });
+})();
+
 
     } // end initApp
   </script>
