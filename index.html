@@ -12,6 +12,16 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v7.4.0/ol.css" />
 
   <style>
+    /* Branding ja ribbon */
+  #map { width:100%; height:100vh; position:relative; }
+  #map-branding { position:absolute; left:12px; top:12px; display:flex; gap:8px; align-items:center; z-index:2400; pointer-events:none; }
+  #orchid-logo-svg { width:44px; height:44px; pointer-events:auto; cursor:pointer; background:rgba(255,255,255,0.95); padding:4px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.08); }
+  #map-title { pointer-events:auto; margin-left:6px; font-weight:700; color:#a3005a; font-size:15px; background:rgba(255,255,255,0.95); padding:4px 8px; border-radius:8px; line-height:1; }
+  #tool-ribbon { position:fixed; right:12px; top:56px; display:flex; flex-direction:column; gap:8px; z-index:2440; }
+  .rbtn { background:#fff; border:1px solid #eee; padding:8px 10px; border-radius:8px; cursor:pointer; min-width:110px; font-weight:600; }
+  .modal-backdrop { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); z-index:99999; }
+  .modal-card { background:#fff; border-radius:10px; padding:18px; max-width:720px; width:96vw; max-height:86vh; overflow:auto; }
+
     /* Basic vars and mobile vh fix var (set by JS) */
     :root {
       --topbar-height: 64px;
@@ -154,7 +164,7 @@
     #tool-ribbon.hidden { transform: translateX(8px) scale(0.98); opacity: 0; pointer-events:none; }
     .rbtn { background:#fff; border:1px solid #eee; padding:8px 10px; border-radius:8px; cursor:pointer; min-width:110px; font-weight:600; color:#333; }
     .rbtn.active { background:linear-gradient(180deg,#ff4da6,#c2185b); color:#fff; }
-
+   
     /* Small helper for legacy sidebar (kept hidden visually) */
     .sidebar { display:none; }
 
@@ -203,10 +213,48 @@
       </div>
       <div id="controls-ui" aria-hidden="true"></div>
     </div>
+    
   </header>
 
   <main class="main-area" role="main">
-    <div id="map" tabindex="0" role="application" aria-label="Kaart"></div>
+   <div id="map" tabindex="0" role="application" aria-label="Kaart"></div>
+
+<!-- Branding (logo + pealkiri) -->
+<div id="map-branding" aria-hidden="false">
+  <svg id="orchid-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Orhidee logo">
+    <!-- SVG sisu -->
+  </svg>
+  <div id="map-title">Orhideeliste kasvualad — Palivere</div>
+</div>
+
+<!-- Ribbon / tööriistad -->
+<nav id="tool-ribbon" aria-hidden="true">
+  <button id="ribbon-draw" class="rbtn">Joonista</button>
+  <button id="ribbon-modify" class="rbtn">Muuda</button>
+  <button id="ribbon-back" class="rbtn">Tagasi</button>
+  <button id="ribbon-save" class="rbtn">Salvesta</button>
+  <button id="ribbon-load" class="rbtn">Laadi</button>
+  <button id="ribbon-export" class="rbtn">Ekspordi</button>
+  <button id="ribbon-clear" class="rbtn">Kustuta</button>
+  <button id="btn-finish-draw" class="rbtn">Lõpeta joonistamine</button>
+</nav>
+
+<!-- Admin modal (logo avab selle) -->
+<div id="admin-modal" class="modal-backdrop" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true">
+    <button class="modal-close" id="admin-close">✕</button>
+    <h2>Administraatori info</h2>
+    <div style="display:flex;gap:12px;align-items:center">
+      <img alt="Orhidee" style="width:48px;height:48px;border-radius:6px" />
+      <div>
+        <strong>Orhideeliste kasvualad — Palivere</strong>
+        <p style="margin:6px 0 0 0;font-size:13px;color:#444">Lühikirjeldus projekti kohta.</p>
+        <p style="margin:8px 0 0 0"><a href="mailto:info@kahem.info" id="admin-mail" style="color:#a3005a;font-weight:700;text-decoration:none">Saada e‑post: info@kahem.info</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+
 
     <!-- Branding: inline SVG logo + title (overlay on map) -->
     <div id="map-branding" aria-hidden="false">
@@ -395,8 +443,38 @@
 
       // --- Persistence (localStorage) ---
       const GEO_KEY = 'orhideed_features_v1';
+      
       const format = new ol.format.GeoJSON();
+const undoStack = [];
+const redoStack = [];
+const actionStack = [];
+const MAX_STACK = 60;
 
+function currentStateGeoJSON() {
+  try { return format.writeFeatures(drawSource.getFeatures(), { featureProjection: 'EPSG:3857' }); }
+  catch(e){ console.warn('currentStateGeoJSON error', e); return null; }
+}
+function pushSnapshot() {
+  try {
+    const g = currentStateGeoJSON();
+    if (g !== null) { undoStack.push(g); if (undoStack.length > MAX_STACK) undoStack.shift(); redoStack.length = 0; }
+  } catch(e){ console.warn(e); }
+}
+function pushAction(type, geojson) {
+  try { actionStack.push({type:type,data:geojson}); if (actionStack.length > MAX_STACK) actionStack.shift(); redoStack.length = 0; }
+  catch(e){ console.warn(e); }
+}
+function restoreGeoJSON(geojson) {
+  try {
+    if (!geojson) return;
+    const feats = format.readFeatures(geojson, { featureProjection: 'EPSG:3857' });
+    drawSource.clear();
+    drawSource.addFeatures(feats);
+    if (typeof saveToLocal === 'function') saveToLocal();
+  } catch(e){ console.error('restoreGeoJSON error', e); }
+}
+    // initial snapshot
+pushSnapshot(); pushAction('load', currentStateGeoJSON());
       function saveToLocal() {
         try {
           const geojson = format.writeFeatures(drawSource.getFeatures(), { featureProjection: 'EPSG:3857' });
@@ -441,24 +519,37 @@
         reader.readAsText(file);
       }
 
-      // --- UI controls (ribbon) wiring ---
-      // Ribbon buttons are in DOM; connect them to functions
-      document.getElementById('ribbon-draw')?.addEventListener('click', () => {
-        enableDraw('Polygon');
-        document.querySelectorAll('#tool-ribbon .rbtn').forEach(b => b.classList.remove('active'));
-        document.getElementById('ribbon-draw').classList.add('active');
-      });
-      document.getElementById('ribbon-modify')?.addEventListener('click', () => {
-        enableDraw('Modify');
-        document.querySelectorAll('#tool-ribbon .rbtn').forEach(b => b.classList.remove('active'));
-        document.getElementById('ribbon-modify').classList.add('active');
-      });
-      document.getElementById('ribbon-save')?.addEventListener('click', () => { saveToLocal(); });
-      document.getElementById('ribbon-load')?.addEventListener('click', () => { loadFromLocal(); });
-      document.getElementById('ribbon-export')?.addEventListener('click', () => { exportGeoJSON(); });
-      document.getElementById('ribbon-clear')?.addEventListener('click', () => {
-        if (confirm('Kustutada kõik joonised?')) { drawSource.clear(); saveToLocal(); flashMessage('Kustutatud'); }
-      });
+      // UI controls (ribbon) — lisa alles pärast drawSource ja funktsioonide olemasolu
+document.getElementById('ribbon-draw')?.addEventListener('click', () => {
+  enableDraw('Polygon');
+  document.querySelectorAll('#tool-ribbon .rbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById('ribbon-draw').classList.add('active');
+});
+document.getElementById('ribbon-modify')?.addEventListener('click', () => {
+  enableDraw('Modify');
+  document.querySelectorAll('#tool-ribbon .rbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById('ribbon-modify').classList.add('active');
+});
+document.getElementById('ribbon-save')?.addEventListener('click', () => { saveToLocal(); });
+document.getElementById('ribbon-load')?.addEventListener('click', () => { loadFromLocal(); });
+document.getElementById('ribbon-export')?.addEventListener('click', () => { exportGeoJSON(); });
+document.getElementById('btn-finish-draw')?.addEventListener('click', () => {
+  disableInteractions();
+  document.querySelectorAll('#tool-ribbon .rbtn').forEach(b => b.classList.remove('active'));
+  flashMessage('Joonistamine lõpetatud');
+});
+document.getElementById('ribbon-back')?.addEventListener('click', () => undoAction());
+document.getElementById('ribbon-clear')?.addEventListener('click', function() {
+  if (typeof drawSource === 'undefined' || typeof saveToLocal !== 'function') { flashMessage('Kustutamine ei ole hetkel saadaval'); return; }
+  const confirmText = prompt('Kirjuta täpselt sõna KUSTUTA, et kinnitada kõigi jooniste kustutamine:');
+  if (confirmText === null) { flashMessage('Kustutamine tühistatud'); return; }
+  if (String(confirmText).trim().toUpperCase() !== 'KUSTUTA') { flashMessage('Kustutamine tühistatud (vale kinnitus)'); return; }
+  try { if (typeof currentStateGeoJSON === 'function' && typeof pushAction === 'function') pushAction('clear', currentStateGeoJSON()); else if (typeof pushSnapshot === 'function') pushSnapshot(); } catch(e){ console.warn(e); }
+  drawSource.clear();
+  saveToLocal();
+  flashMessage('Kustutatud');
+});
+
 
       // Tagasi (undo) — lihtne: eemalda viimane lisatud feature
       document.getElementById('ribbon-back')?.addEventListener('click', () => {
