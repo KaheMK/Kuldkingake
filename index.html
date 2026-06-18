@@ -4,6 +4,58 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Kaart — Orhideed </title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+
+<style>
+  /* CSS muutujad ja mobiili‑kõrguse tugi */
+  :root {
+    --topbar-height: 64px;
+    --footer-height: 36px;
+    /* --vh muutuja täidetakse JS-iga (et vältida 100vh probleeme mobiilis) */
+    --vh: 1vh;
+  }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    -webkit-text-size-adjust: 100%;
+    background: var(--bg, #f7f8fa);
+  }
+
+  /* Map ja peamised alad kasutavad dünaamilist kõrgust */
+  #map {
+    width: 100%;
+    /* kasutame var(--vh) et vältida aadressiriba muutustest tekkivaid tühikuid */
+    height: calc(var(--vh, 1vh) * 100 - var(--topbar-height) - var(--footer-height));
+    min-height: 200px;
+  }
+
+  /* Täisekraan laadija (loader) — servast servani */
+  #page-loader {
+    position: fixed;
+    inset: 0; /* top:0; right:0; bottom:0; left:0; */
+    width: 100vw;
+    height: 100dvh; /* eelistame 100dvh kui brauser toetab */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    z-index: 99999;
+    -webkit-backdrop-filter: blur(0); /* ei ole vajalik, aga turvaline */
+    box-sizing: border-box;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  /* Lihtne animatsioon/tekst loaderile */
+  #page-loader .inner {
+    text-align: center;
+    color: #1f2937;
+    font-weight: 600;
+    font-size: 14px;
+  }
+</style>
+
 
   <!-- OpenLayers CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v7.4.0/ol.css" />
@@ -78,7 +130,14 @@
     <div id="map"></div>
 
     <aside id="sidebar" class="sidebar" role="complementary" aria-labelledby="sidebar-title">
-      <!-- content injected -->
+      <!-- LAYER SWITCHER: kleebi see sidebarisse (enne </aside>) -->
+<div id="layer-switcher" class="layer-switcher" aria-label="Kihtide valik">
+  <h3>Kihtide valik</h3>
+  <label><input type="checkbox" id="ls-osm" checked> <span>Baaskaart (OSM)</span></label><br>
+  <label><input type="checkbox" id="ls-cad"> <span>Katastriosa</span></label><br>
+  <label><input type="checkbox" id="ls-draw" checked> <span>Joonistused</span></label>
+</div>
+
     </aside>
   </main>
 
@@ -115,13 +174,23 @@
 
         // --- Sidebar helpers ---
         const sidebarEl = document.getElementById('sidebar');
-        function setSidebarHtml(title, html) {
-          sidebarEl.innerHTML = '';
-          if (title) {
-            const h = document.createElement('h2'); h.textContent = title; sidebarEl.appendChild(h);
-          }
-          const wrapper = document.createElement('div'); wrapper.innerHTML = html; sidebarEl.appendChild(wrapper);
-        }
+        // Asendatud setSidebarHtml: säilitab layer-switcher kui see on olemas
+function setSidebarHtml(title, html) {
+  // säilita layer-switcher, kui see on olemas
+  const preserved = sidebarEl.querySelector('#layer-switcher');
+  // puhasta sidebar
+  sidebarEl.innerHTML = '';
+  // lisa tagasi layer-switcher enne sisu, kui see oli olemas
+  if (preserved) sidebarEl.appendChild(preserved);
+  // lisa pealkiri ja sisu
+  if (title) {
+    const h = document.createElement('h2'); h.textContent = title; sidebarEl.appendChild(h);
+  }
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = html || '';
+  sidebarEl.appendChild(wrapper);
+}
+
         function showWelcome() {
           setSidebarHtml('Tere tulemast', '<p>Vali objekt kaardilt või kasuta nuppe joonistamiseks ja salvestamiseks.</p>');
         }
@@ -160,7 +229,7 @@
         const cadastral = new ol.layer.Image({
           source: new ol.source.ImageWMS({
             url: 'https://kaart.maaamet.ee/wms/alus',
-            params: { LAYERS: 'BK_METS', FORMAT: 'image/png', TRANSPARENT: true, VERSION: '1.3.0' },
+            params: { LAYERS: 'BAASKAART', FORMAT: 'image/png', TRANSPARENT: true, VERSION: '1.3.0' },
             crossOrigin: 'anonymous'
           }),
           visible: false,
@@ -186,8 +255,7 @@
           view: view,
           controls: [] // add controls manually
         });
-
-        // Add controls manually (avoid ol.control.defaults issues)
+                // Add controls manually (avoid ol.control.defaults issues)
         map.addControl(new ol.control.Zoom());
         map.addControl(new ol.control.FullScreen());
         map.addControl(new ol.control.Rotate({ autoHide: true }));
@@ -348,6 +416,101 @@
         toggle.checked = cadastral.getVisible();
         toggle.addEventListener('change', (ev) => cadastral.setVisible(!!ev.target.checked));
 
+        // --- Layer switcher init (kleepi see toggle ploki järel, enne overlay loomist) ---
+        function initLayerSwitcher(osm, cadastral, drawLayer) {
+          const lsOsm = document.getElementById('ls-osm');
+          const lsCad = document.getElementById('ls-cad');
+          const lsDraw = document.getElementById('ls-draw');
+
+          if (!lsOsm || !lsCad || !lsDraw) {
+            console.warn('Layer switcher DOM elemendid puuduvad. Kontrolli, et HTML on sidebaris enne skripti.');
+            return;
+          }
+          if (!osm || !cadastral || !drawLayer) {
+            console.warn('Layer objekt(id) puuduvad. Kutsu initLayerSwitcher alles pärast kihtide loomist.');
+            return;
+          }
+
+          // Sünkroniseeri algse nähtavusega
+          try {
+            lsOsm.checked = typeof osm.getVisible === 'function' ? osm.getVisible() : true;
+            lsCad.checked = typeof cadastral.getVisible === 'function' ? cadastral.getVisible() : false;
+            lsDraw.checked = typeof drawLayer.getVisible === 'function' ? drawLayer.getVisible() : true;
+          } catch (e) {
+            console.warn('Ei saanud sünkroniseerida layer nähtavust:', e);
+          }
+
+          // Kuulajad: checkbox -> layer
+          lsOsm.addEventListener('change', (e) => { try { osm.setVisible(!!e.target.checked); } catch (err) { console.error(err); } });
+          lsCad.addEventListener('change', (e) => { try { cadastral.setVisible(!!e.target.checked); } catch (err) { console.error(err); } });
+          lsDraw.addEventListener('change', (e) => { try { drawLayer.setVisible(!!e.target.checked); } catch (err) { console.error(err); } });
+
+          // Kui kihid muutuvad mujal, uuenda checkboxe
+          if (typeof osm.on === 'function') osm.on('change:visible', () => { lsOsm.checked = osm.getVisible(); });
+          if (typeof cadastral.on === 'function') cadastral.on('change:visible', () => { lsCad.checked = cadastral.getVisible(); });
+          if (typeof drawLayer.on === 'function') drawLayer.on('change:visible', () => { lsDraw.checked = drawLayer.getVisible(); });
+        }
+
+        // Kutsu initLayerSwitcher SIIN (pärast map ja kihte on loodud)
+        initLayerSwitcher(osm, cadastral, drawLayer);
+
+        // --- Safe layer visibility persistence and listeners (paste after initLayerSwitcher(...) call) ---
+        function saveLayerVisibility() {
+          try {
+            const lsOsm = document.getElementById('ls-osm');
+            const lsCad = document.getElementById('ls-cad');
+            const lsDraw = document.getElementById('ls-draw');
+            const state = {
+              osm: !!(lsOsm && lsOsm.checked),
+              cad: !!(lsCad && lsCad.checked),
+              draw: !!(lsDraw && lsDraw.checked)
+            };
+            localStorage.setItem('layer_visibility', JSON.stringify(state));
+          } catch (e) { console.warn('saveLayerVisibility error', e); }
+        }
+
+        function restoreLayerVisibility(osm, cadastral, drawLayer) {
+          try {
+            const saved = localStorage.getItem('layer_visibility');
+            if (!saved) return;
+            const s = JSON.parse(saved);
+            if (s.osm !== undefined && osm && typeof osm.setVisible === 'function') osm.setVisible(!!s.osm);
+            if (s.cad !== undefined && cadastral && typeof cadastral.setVisible === 'function') cadastral.setVisible(!!s.cad);
+            if (s.draw !== undefined && drawLayer && typeof drawLayer.setVisible === 'function') drawLayer.setVisible(!!s.draw);
+            // sync checkboxes with actual layer visibility
+            const lsOsm = document.getElementById('ls-osm');
+            const lsCad = document.getElementById('ls-cad');
+            const lsDraw = document.getElementById('ls-draw');
+            if (lsOsm) lsOsm.checked = osm.getVisible();
+            if (lsCad) lsCad.checked = cadastral.getVisible();
+            if (lsDraw) lsDraw.checked = drawLayer.getVisible();
+          } catch (e) { console.warn('restoreLayerVisibility error', e); }
+        }
+
+        (function attachLayerSwitcherListeners() {
+          const lsOsm = document.getElementById('ls-osm');
+          const lsCad = document.getElementById('ls-cad');
+          const lsDraw = document.getElementById('ls-draw');
+          if (!lsOsm || !lsCad || !lsDraw) {
+            // elemente pole DOMis veel — proovi uuesti veidi hiljem
+            setTimeout(attachLayerSwitcherListeners, 120);
+            return;
+          }
+
+          lsOsm.addEventListener('change', () => {
+            try { osm.setVisible(!!lsOsm.checked); saveLayerVisibility(); } catch(e){ console.error(e); }
+          });
+          lsCad.addEventListener('change', () => {
+            try { cadastral.setVisible(!!lsCad.checked); saveLayerVisibility(); } catch(e){ console.error(e); }
+          });
+          lsDraw.addEventListener('change', () => {
+            try { drawLayer.setVisible(!!lsDraw.checked); saveLayerVisibility(); } catch(e){ console.error(e); }
+          });
+
+          // taastame salvestatud seisu kohe
+          restoreLayerVisibility(osm, cadastral, drawLayer);
+        })();
+
         // --- Popup overlay for editing attributes (optional) ---
         const overlayEl = document.createElement('div');
         overlayEl.className = 'attr-popup';
@@ -413,6 +576,32 @@
       }, 50);
     }
   </script>
+  // Aseta --vh muutuja, et vältida 100vh probleeme mobiilides (aadressiriba)
+function setVhVar() {
+  document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
+}
+setVhVar();
+window.addEventListener('resize', setVhVar);
+
+// Eemalda loader kui kõik on valmis. Kui tahad oodata kaardi initsialiseerimist,
+// kutsu removeLoader() peale map initsialiseerimist (näiteks pärast console.info('Kaart initsialiseeritud')).
+function removeLoader() {
+  const loader = document.getElementById('page-loader');
+  if (!loader) return;
+  loader.style.transition = 'opacity 220ms ease';
+  loader.style.opacity = '0';
+  setTimeout(() => { loader.remove(); }, 240);
+}
+
+// Kui tahad eemaldada loaderi automaatselt lehe laadimisel:
+window.addEventListener('load', () => {
+  // väike viivitus, et kõik ressursid jõuaksid valmis
+  setTimeout(removeLoader, 120);
+});
+
+// Alternatiiv: kui soovid eemaldada loaderi alles siis, kui kaart on initsialiseeritud,
+// kutsu removeLoader() otse oma initApp / kaart initsialiseerimise lõpus.
+
 </body>
 </html>
 
