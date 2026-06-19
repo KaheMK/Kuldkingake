@@ -209,6 +209,8 @@
       #sliding-sidebar.open { right: 0; }
     }
     
+
+
 /* Modal visibility fix: give .open absolute priority */
 .modal-backdrop {
   display: none;
@@ -250,6 +252,8 @@
 }
 
 
+
+
   </style>
 </head>
 <body>
@@ -275,13 +279,7 @@
   <main class="main-area" role="main">
    <div id="map" tabindex="0" role="application" aria-label="Kaart"></div>
 
-<!-- Branding (logo + pealkiri) -->
-<div id="map-branding" aria-hidden="false">
-  <svg id="orchid-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Orhidee logo">
-    <!-- SVG sisu -->
-  </svg>
-  <div id="map-title">Orhideeliste kasvualad — Palivere</div>
-</div>
+
 
 <!-- Ribbon / tööriistad -->
 <nav id="tool-ribbon" aria-hidden="true">
@@ -749,7 +747,7 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
       });
 
       console.info('Kaart initsialiseeritud (UMD).');
-
+     
       // --- Sidebar & ribbon behavior + audio unlock ---
       const sidebarTab = document.getElementById('sidebar-tab');
       const slidingSidebar = document.getElementById('sliding-sidebar');
@@ -864,67 +862,52 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
           if (loader) { loader.style.transition='opacity 220ms'; loader.style.opacity='0'; setTimeout(()=>loader.remove(),240); }
         }, 120);
       });
-// --- Konfliktivaba, ligipääsetav modal adapter ---
-// Paigalda initApp() lõppu PÄRAST DOM elementide loomist
-(function modalAdapter() {
+
+(function modalAdapter(){
   const logo = document.getElementById('orchid-logo-svg');
   const adminModal = document.getElementById('admin-modal');
   const adminClose = document.getElementById('admin-close');
   const pageRoot = document.querySelector('main') || document.body;
+  if (!logo || !adminModal) return;
 
-  if (!logo || !adminModal) { console.warn('Modal või logo puudub — adapter ei lisatud'); return; }
-
-  // Veendu, et modal on body all (väldib kaardi renderi eemaldamist)
   if (adminModal.parentElement !== document.body) document.body.appendChild(adminModal);
   adminModal.style.zIndex = '100000';
-  // Ära ava modal automaatselt siin (ei lisa class 'open' ega display)
 
-  // Tausta inert/aria-hidden käsitlemine (ligipääsetav fallback)
-  function setBackgroundInert(on) {
+  function setBackgroundInert(on){
     try {
-      if ('inert' in HTMLElement.prototype) {
-        pageRoot.inert = !!on;
-      } else {
-        if (on) pageRoot.setAttribute('aria-hidden', 'true');
-        else pageRoot.removeAttribute('aria-hidden');
-      }
-    } catch (e) { console.warn('setBackgroundInert error', e); }
+      if ('inert' in HTMLElement.prototype) pageRoot.inert = !!on;
+      else if (on) pageRoot.setAttribute('aria-hidden','true');
+      else pageRoot.removeAttribute('aria-hidden');
+    } catch(e){ console.warn(e); }
   }
 
-  function openModal(e) {
+  function openModal(e){
     e && e.stopPropagation();
-    // 1) peida taust assistiivtehnoloogialt
     setBackgroundInert(true);
-    // 2) näita modalit (inline stiil tagab, et CSS reeglid ei peida seda)
-   // adminModal.style.display = 'flex';
-    adminModal.setAttribute('aria-hidden', 'false');
-    //adminModal.classList.add('open');
-    // 3) vii fookus modalisse
-    const focusable = adminModal.querySelector('button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])');
-    if (focusable) focusable.focus();
-    else if (adminModal.focus) adminModal.focus();
+    adminModal.style.display = 'flex';
+    adminModal.setAttribute('aria-hidden','false');
+    adminModal.classList.add('open');
+    const f = adminModal.querySelector('button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])');
+    if (f) f.focus();
   }
 
-  function closeModal() {
-    // peida modal ja taasta taust
+  function closeModal(){
     adminModal.classList.remove('open');
-    adminModal.setAttribute('aria-hidden', 'true');
+    adminModal.setAttribute('aria-hidden','true');
     adminModal.style.display = 'none';
     setBackgroundInert(false);
-    try { logo.focus(); } catch (e) {}
+    try { logo.focus(); } catch(e){}
   }
 
-  // Eemalda vana handler, lisa uus (väldib topelt‑listenerit)
-  try { if (logo._adminClickHandler) logo.removeEventListener('click', logo._adminClickHandler); } catch (e) {}
+  try { if (logo._adminClickHandler) logo.removeEventListener('click', logo._adminClickHandler); } catch(e){}
   logo._adminClickHandler = openModal;
   logo.addEventListener('click', openModal);
 
   if (adminClose) adminClose.addEventListener('click', closeModal);
   adminModal.addEventListener('click', (ev) => { if (ev.target === adminModal) closeModal(); });
 
-  // Klaviatuuri ligipääsetavus: Esc sulgeb; lihtne Tab‑trap
   window.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape' && adminModal.style.display === 'flex') { ev.preventDefault(); closeModal(); return; }
+    if (ev.key === 'Escape' && adminModal.style.display === 'flex') { ev.preventDefault(); closeModal(); }
     if (ev.key === 'Tab' && adminModal.style.display === 'flex') {
       const focusables = Array.from(adminModal.querySelectorAll('button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])')).filter(Boolean);
       if (focusables.length === 0) return;
@@ -934,6 +917,8 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
     }
   });
 })();
+
+
 
 
 
