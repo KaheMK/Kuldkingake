@@ -281,40 +281,41 @@
 
 
 
-<!-- Ribbon / tööriistad -->
-<nav id="tool-ribbon" aria-hidden="true">
-  <button id="ribbon-draw" class="rbtn">Joonista</button>
-  <button id="ribbon-modify" class="rbtn">Muuda</button>
-  <button id="ribbon-back" class="rbtn">Tagasi</button>
-  <button id="ribbon-save" class="rbtn">Salvesta</button>
-  <button id="ribbon-load" class="rbtn">Laadi</button>
-  <button id="ribbon-export" class="rbtn">Ekspordi</button>
-  <button id="ribbon-clear" class="rbtn">Kustuta</button>
-  <button id="btn-finish-draw" class="rbtn">Lõpeta joonistamine</button>
-</nav>
+
 
 <!-- Admin modal (logo avab selle) -->
-<div id="admin-modal" class="modal-backdrop" aria-hidden="true">
-  <div class="modal-card" role="dialog" aria-modal="true">
-    <button class="modal-close" id="admin-close">✕</button>
-    <h2>Administraatori info</h2>
+<div id="admin-modal" class="modal-backdrop" aria-hidden="true" style="display:none;z-index:100000">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="admin-title">
+    <button class="modal-close" id="admin-close" aria-label="Sulge administraatori info">✕</button>
+    <h2 id="admin-title">Administraatori info</h2>
+
     <div style="display:flex;gap:12px;align-items:center">
+      <!-- Inline SVG modalisse -->
       <img alt="Orhidee" style="width:48px;height:48px;border-radius:6px" />
+      
+
       <div>
         <strong>Orhideeliste kasvualad — Palivere</strong>
         <p style="margin:6px 0 0 0;font-size:13px;color:#444">Lühikirjeldus projekti kohta.</p>
-        <p style="margin:8px 0 0 0"><a href="mailto:info@kahem.info" id="admin-mail" style="color:#a3005a;font-weight:700;text-decoration:none">Saada e‑post: info@kahem.info</a></p>
+        <p style="margin:8px 0 0 0">
+          <a href="mailto:info@kahem.info" id="admin-mail" style="color:#a3005a;font-weight:700;text-decoration:none">
+            Saada e‑post: info@kahem.info
+          </a>
+        </p>
       </div>
     </div>
+
   </div>
 </div>
+
 
 
     <!-- Branding: inline SVG logo + title (overlay on map) -->
     <div id="map-branding" aria-hidden="false">
       <!-- Inline SVG logo -->
-      <svg id="orchid-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="48" height="48" role="img" aria-label="Orhidee logo">
+      <svg id="orchid-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="48" height="48" tabindex="0" role="img" aria-label="Orhidee logo">
         <title>Orhidee</title>
+
         <g fill="none" stroke="#a3005a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
           <path d="M60 18c6 0 12 4 14 9 2 5 1 10-2 14-3 4-8 6-12 6s-9-2-12-6c-3-4-4-9-2-14 2-5 8-9 14-9z"/>
           <path d="M60 36c8 0 16 6 20 12 4 6 4 14 0 20-4 6-12 10-20 10s-16-4-20-10c-4-6-4-14 0-20 4-6 12-12 20-12z"/>
@@ -917,6 +918,32 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
     }
   });
 })();
+
+    
+(function(){
+  const modal = document.getElementById('admin-modal');
+  if(!modal) return console.log('admin-modal puudub');
+  const img = modal.querySelector('img[alt="Orhidee"]') || modal.querySelector('img');
+  const svgHTML = `<div id="modal-branding" aria-hidden="false">
+    <svg id="orchid-logo-svg" width="48" height="48" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Orhidee logo" tabindex="0" style="width:48px;height:48px;border-radius:6px;display:block">
+      <title>Orhidee</title>
+      <g fill="none" stroke="#a3005a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M60 18c6 0 12 4 14 9 2 5 1 10-2 14-3 4-8 6-12 6s-9-2-12-6c-3-4-4-9-2-14 2-5 8-9 14-9z"/>
+        <path d="M60 36c8 0 16 6 20 12 4 6 4 14 0 20-4 6-12 10-20 10s-16-4-20-10c-4-6-4-14 0-20 4-6 12-12 20-12z"/>
+        <path d="M36 44c6-2 12 0 16 4"/>
+        <path d="M84 44c-6-2-12 0-16 4"/>
+        <path d="M60 56c4 0 8 3 8 6s-4 6-8 6-8-3-8-6 4-6 8-6z"/>
+        <path d="M60 70v12"/>
+        <path d="M52 30c-6 6-10 14-10 22"/>
+        <path d="M68 30c6 6 10 14 10 22"/>
+      </g>
+    </svg>
+  </div>`;
+  if(img) img.insertAdjacentHTML('afterend', svgHTML), img.remove();
+  else modal.querySelector('.modal-card > div')?.insertAdjacentHTML('afterbegin', svgHTML);
+  console.log('Inline SVG lisatud modali');
+})();
+
 
 
 
