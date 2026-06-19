@@ -251,6 +251,11 @@
   display: flex !important;
 }
 
+.login-badge {
+  background:#fff; border:1px solid #ddd; padding:6px 10px; border-radius:6px;
+  cursor:pointer; font-size:14px;
+}
+.auth-controls { display:inline-block; margin-left:12px; vertical-align:middle; }
 
 
 
@@ -263,6 +268,7 @@
   <!-- Topbar kept in DOM but hidden via CSS for accessibility -->
   <header class="topbar" aria-hidden="true">
     <h1 class="app-title">Orhideeliste kasvualad — Palivere</h1>
+    
     <div class="top-controls">
       <div class="toggle-wrap">
         <label class="switch">
@@ -303,8 +309,15 @@
           </a>
         </p>
       </div>
-    </div>
+    <!-- LISAME SIIN Logi sisse nupu (pane see täpselt siia) -->
+  <div class="auth-controls-inline" style="margin-left:auto;display:flex;align-items:center;">
+    <button id="login-badge" class="login-badge" type="button" aria-haspopup="dialog"
+      style="background:#fff;border:1px solid #ddd;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:14px;">
+      Logi sisse
+    </button>
+  </div>
 
+    </div>
   </div>
 </div>
 
@@ -951,6 +964,85 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
 
     } // end initApp
   </script>
+  
+<div id="login-modal" class="modal-backdrop" style="display:none">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
+    <button id="login-close" class="modal-close" aria-label="Sulge">✕</button>
+    <h3 id="login-title">Logi sisse e‑postiga</h3>
+    <input id="login-email" type="email" placeholder="Sinu e‑post" />
+    <button id="login-send" type="button">Saada Magic Link</button>
+    <p id="login-msg" style="color:#666;font-size:13px"></p>
+    <div style="margin-top:8px">
+      <button id="logout-btn" style="display:none" type="button">Logi välja</button>
+    </div>
+  </div>
+</div>
+<!-- tavaline skript: avab admin‑modali sees oleva login modal'i -->
+<script>
+document.addEventListener('click', function (e) {
+  if (e.target && e.target.id === 'login-badge') {
+    // kui sul on eraldi login modal (login-modal), ava see; muidu avame admin‑modali
+    const loginModal = document.getElementById('login-modal');
+    if (loginModal) { loginModal.style.display = 'flex'; return; }
+    const adminModal = document.getElementById('admin-modal');
+    if (adminModal) { adminModal.style.display = 'flex'; adminModal.setAttribute('aria-hidden','false'); }
+  }
+});
+</script>
+
+
+<script type="module">
+import { supabase, initAuth, ensureUserRow } from './supabase-client.js'; // kontrolli, et fail on õiges kohas
+
+const loginSend = document.getElementById('login-send');
+const loginClose = document.getElementById('login-close');
+const loginEmail = document.getElementById('login-email');
+const loginMsg = document.getElementById('login-msg');
+const logoutBtn = document.getElementById('logout-btn');
+
+let frontendUser = null;
+
+if (loginClose) loginClose.addEventListener('click', () => { document.getElementById('login-modal').style.display = 'none'; loginMsg.textContent = ''; });
+if (logoutBtn) logoutBtn.addEventListener('click', async () => { await supabase.auth.signOut(); frontendUser = null; updateAuthUI(); });
+
+if (loginSend) loginSend.addEventListener('click', async () => {
+  const email = (loginEmail?.value || '').trim();
+  if (!email) { loginMsg.textContent = 'Sisesta kehtiv e‑post'; return; }
+  loginMsg.textContent = 'Saadan linki…';
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href }});
+  if (error) loginMsg.textContent = 'Viga: ' + error.message;
+  else loginMsg.textContent = 'Saatsime lingi sinu e‑postile. Ava link, et sisse logida.';
+});
+
+await initAuth(async (sessionUser) => {
+  if (!sessionUser) { frontendUser = null; updateAuthUI(); return; }
+  const row = await ensureUserRow(sessionUser.email, sessionUser.user_metadata?.full_name || null);
+  frontendUser = { id: row.id, email: row.email, role: row.role || 'user', display_name: row.display_name };
+  updateAuthUI();
+});
+
+function updateAuthUI() {
+  const badge = document.getElementById('login-badge');
+  if (!badge) return;
+  if (frontendUser) {
+    badge.textContent = frontendUser.display_name || frontendUser.email;
+    if (logoutBtn) logoutBtn.style.display = 'inline-block';
+    if (loginEmail) loginEmail.style.display = 'none';
+    if (loginSend) loginSend.style.display = 'none';
+    loginMsg.textContent = 'Sisse logitud';
+    const lm = document.getElementById('login-modal'); if (lm) lm.style.display = 'none';
+  } else {
+    badge.textContent = 'Logi sisse';
+    if (logoutBtn) logoutBtn.style.display = 'none';
+    if (loginEmail) loginEmail.style.display = 'inline-block';
+    if (loginSend) loginSend.style.display = 'inline-block';
+    loginMsg.textContent = '';
+  }
+}
+
+window.appAuth = { getUser: () => frontendUser };
+</script>
+
 </body>
 </html>
 
