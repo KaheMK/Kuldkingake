@@ -1,18 +1,14 @@
-// js/map.js
-import Map from 'https://cdn.jsdelivr.net/npm/ol@v7.4.0/Map.js';
-import View from 'https://cdn.jsdelivr.net/npm/ol@v7.4.0/View.js';
-import { fromLonLat } from 'https://cdn.jsdelivr.net/npm/ol@v7.4.0/proj.js';
-
+// Laadime OpenLayersi komponendid turvalise ESM jaoturi kaudu
+// Kasutame otse kaart.html päises laetud OpenLayersit
 export function createMap(targetId = 'map') {
-  const map = new Map({
+  return new ol.Map({
     target: targetId,
-    view: new View({
-      center: fromLonLat([24.0, 58.9]), // Palivere/Tallinn ümbrus
+    view: new ol.View({
+      center: ol.proj.fromLonLat([24.0, 58.9]), // Palivere piirkond
       zoom: 12
     }),
     controls: []
   });
-  return map;
 }
 
 
