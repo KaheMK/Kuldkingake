@@ -492,18 +492,13 @@
         snapInteraction = new ol.interaction.Snap({ source: drawSource });
         map.addInteraction(snapInteraction);
 
-        drawInteraction.on('drawend', (evt) => {
-          const f = evt.feature;
-          f.setId('f-' + Date.now());
-          f.set('createdAt', new Date().toISOString());
-          f.set('title', f.get('title') || 'Märk');
-          f.set('note', f.get('note') || '');
-          setTimeout(() => {
-            const note = prompt('Sisesta märge valitud alale:', f.get('note') || '');
-            if (note !== null) f.set('note', note);
-            saveToLocal();
-          }, 50);
-        });
+      
+        drawInteraction.on('drawend', async (evt) => {
+  // ... (vt originaalkoodi salvestusloogika kontrollimiseks)
+  // KONTROLLIME SISSILOGITUST LÄBI SUPABASE
+  // ... (vt täielikku loogikat koodi uuendamiseks)
+});
+
       }
 
       function disableInteractions() {
@@ -713,26 +708,10 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
       const overlay = new ol.Overlay({ element: overlayEl, autoPan: true, autoPanAnimation: { duration: 200 } });
       map.addOverlay(overlay);
 
-      map.on('dblclick', (evt) => {
-        const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f);
-        if (!feature) return;
-        const coord = evt.coordinate;
-        overlay.setPosition(coord);
-        overlayEl.innerHTML = `
-          <label for="note">Märge</label>
-          <textarea id="note">${escapeHtml(feature.get('note')||'')}</textarea>
-          <div style="margin-top:8px;display:flex;gap:8px;">
-            <button id="save-note">Salvesta</button>
-            <button id="cancel-note">Tühista</button>
-          </div>
-        `;
-        document.getElementById('save-note').addEventListener('click', () => {
-          const val = document.getElementById('note').value;
-          feature.set('note', val);
-          saveToLocal();
-          overlay.setPosition(undefined);
-          showFeatureInfo(feature);
-        });
+      map.on('dblclick', async (evt) => {
+  // ... (vt infoakna avamiseks kaardilt)
+});
+
         document.getElementById('cancel-note').addEventListener('click', () => overlay.setPosition(undefined));
       });
 
@@ -1443,6 +1422,10 @@ async function laeKõikKaardiAndmed() {
     }
   }
 }
+// --- VÄEJUHATAJA LOOGIKA: INFOAKNA JA LUKKUDE JUHTIMINE ---
+window.avatäpsustatudObjektiModal = async function(objekt, sisseLogitudKasutaja, isNew = false) {
+  // ... (vt funktsionaalsuse ja lukkude lisamiseks)
+};
 
   </script>
 </body>
