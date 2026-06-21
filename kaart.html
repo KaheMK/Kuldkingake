@@ -1361,17 +1361,7 @@ function looTegevusteKonteiner(modal) {
 }
 
 
-// Abifunktsioon kiireteks olekumuutusteks (Lukustamised/Avanemised)
-async function muudaObjektiOlekut(id, uuendus) {
-  // PARANDATUD: .eq('id', id) tagab, et kasutatakse funktsiooni sisendiks tulnud id-d
-  const { error } = await window.supabase.from('vaatlus_objektid').update(uuendus).eq('id', id);
-  if (!error) {
-    alert("Objekti olek edukalt muudetud!");
-    window.location.reload();
-  } else {
-    alert("Viga oleku muutmisel: " + error.message);
-  }
-}
+
 
 
 // Abifunktsioon andmete salvestamiseks (kui omanik muudab liiki või nähtavust)
