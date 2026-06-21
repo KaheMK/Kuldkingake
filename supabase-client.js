@@ -1,11 +1,20 @@
 // supabase-client.js
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-const SUPABASE_URL = 'https://ibnxvfuovfhnrggeicql.supabase.co'; // asenda o
+const SUPABASE_URL = 'https://ibnxvfuovfhnrggeicql.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_yToZd4ljWIIZPEQYHMyMug_C1NAF8jQ';
 
-const SUPABASE_ANON_KEY = 'sb_publishable_yToZd4ljWIIZPEQYHMyMug_C1NAF8jQ'; // asenda oma anon key-ga
+// Lisame siia seadistuse, et sessioon aeguks brauseri tabi sulgemisel:
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    storage: window.sessionStorage,
+    autoRefreshToken: true,
+    persistSession: true
+  }
+});
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// ... ülejäänud kood (currentUser, initAuth jne) jääb samaks ...
+
 
 // Hoidla praeguse kasutaja kohta frontendis
 export let currentUser = null;
@@ -48,3 +57,8 @@ export async function ensureUserRow(email, displayName = null) {
   }
   return data;
 }
+// Teeme muutujad kättesaadavaks ka teistele skriptidele brauseris
+window.supabase = supabase;
+window.initAuth = initAuth;
+window.loadUserRow = loadUserRow;
+window.ensureUserRow = ensureUserRow;
