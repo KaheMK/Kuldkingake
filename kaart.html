@@ -712,8 +712,7 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
   // ... (vt infoakna avamiseks kaardilt)
 });
 
-        document.getElementById('cancel-note').addEventListener('click', () => overlay.setPosition(undefined));
-      });
+     
 
       // --- Small toast / flash message ---
       let flashTimer = null;
@@ -969,7 +968,8 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
 
   <!-- SUPABASE INTEGRATSIOONIMUUDEL -->
   <script type="module">
-    import { supabase, initAuth, ensureUserRow } from './supabase-client.js';
+ import { supabase, initAuth, loadUserRow } from './supabase-client.js';
+
 
     const leftBtn = document.getElementById('auth-left');
     const rightBtn = document.getElementById('auth-right');
@@ -1042,18 +1042,45 @@ if (loginSend) loginSend.style.display = 'inline-block';
 }
 }
 // Käivitame Supabase auth kuulamise
+// Käivitame Supabase auth kuulamise
 try {
-await initAuth(async (sessionUser) => {
-if (!sessionUser) { frontendUser = null; setLoggedOutState(); updateAuthUI(); return; }
-const row = await ensureUserRow(sessionUser.email, sessionUser.user_metadata?.full_name || null);
-frontendUser = { id: row.id, email: row.email, role: row.role || 'user', display_name: row.display_name };
-setLoggedInState(row.email);
-updateAuthUI();
-});
-} catch(e) {
-console.warn("Supabase ootel.", e);
-setLoggedOutState();
+  await initAuth(async (sessionUser) => {
+    if (!sessionUser) { 
+      frontendUser = null; 
+      setLoggedOutState(); 
+      updateAuthUI(); 
+      return; 
+    }
+    
+    // MUUDETUD: Asendame ensureUserRow puhta loadUserRow väljakutsega
+    const row = await window.loadUserRow();
+    
+    if (row) {
+      // Täidame kasutaja andmed profiles tabeli väljade järgi
+      frontendUser = { 
+        id: row.id, 
+        email: row.email, 
+        role: row.roll || 'uudistaja', // andmebaasis on väli 'roll'
+        display_name: row.user_id // andmebaasis on kasutajanimeks 'user_id'
+      };
+      setLoggedInState(row.email);
+    } else {
+      // Igaks juhuks fallback, kui andmebaasist rida veel ei tulnud
+      frontendUser = { 
+        id: sessionUser.id, 
+        email: sessionUser.email, 
+        role: 'uudistaja', 
+        display_name: sessionUser.email.split('@')[0] 
+      };
+      setLoggedInState(sessionUser.email);
+    }
+    
+    updateAuthUI();
+  });
+} catch (e) {
+  console.error("Auth initsialiseerimise viga:", e);
 }
+
     // Paigutame kasutajapilli (auth-pill) korrektselt kaardi peale keskele
     const pill = document.getElementById('auth-pill');
     const mapContainer = document.getElementById('map');
@@ -1063,6 +1090,7 @@ setLoggedOutState();
       }
     }
     // Käivitame auth-oleku kuulamise ja nuppude uuendamise
+// Käivitame auth-oleku kuulamise ja nuppude uuendamise
 window.initAuth(async (user) => {
   const authLeft = document.getElementById('auth-left');
   const authRight = document.getElementById('auth-right');
@@ -1072,21 +1100,26 @@ window.initAuth(async (user) => {
   if (user) {
     // === KASUTAJA ON SISSE LOGITUD ===
     
-    // Laadime andmed tabelist 'users', et saada kätte display_name
+    // Laadime andmed PROFILES tabelist (loadUserRow teeb seda nüüd automaatselt)
     const userRow = await window.loadUserRow();
     
-    // 1. Vasakpoolne nupp asendub kasutajanimega (display_name või meili algus)
-    if (userRow && userRow.display_name) {
-      authLeft.innerText = userRow.display_name;
-      authLeft.title = `Sisse logitud: ${userRow.display_name}`;
-    } else {
+    // MUUDETUD: Kasutame 'user_id' välja, sest profiles tabelis on see display_name asemel
+    if (userRow && userRow.user_id) {
+      authLeft.innerText = userRow.user_id;
+      authLeft.title = `Sisse logitud: ${userRow.user_id}`;
+    } else if (user.email) {
       authLeft.innerText = user.email.split('@')[0];
+    } else {
+      authLeft.innerText = "Sisse logitud";
     }
     
-    // 2. Parempoole nupp asendub tekstiga "Logi välja"
+    // 2. Vasakpoolne nupp saab roheka varjundi, viidates aktiivsele olekule
+    authLeft.style.background = "#e6ffe6";
+    
+    // 3. Parempoole nupp asendub tekstiga "Logi välja"
     authRight.innerText = "Logi välja";
     
-    // 3. Väljalogimise klikkimise loogika koos kinnitusega
+    // 4. Väljalogimise klikkimise loogika koos kinnitusega
     authRight.onclick = async function(e) {
       e.preventDefault();
       
@@ -1098,33 +1131,26 @@ window.initAuth(async (user) => {
         }
       }
     };
-    
-    // Sisselogituna ei pea vasakule nupule midagi juhtuma
-    authLeft.onclick = null;
 
   } else {
-    // === KASUTAJA POLE SISSE LOGITUD ===
+    // === KASUTAJA POLE SISSE LOGITUD VÕI LOGIS VÄLJA ===
     
-    // 1. Taastame algsed tekstid
+    // Taastame algsed tekstid ja stiilid
     authLeft.innerText = "Uudistaja";
     authLeft.title = "Uudistaja";
+    authLeft.style.background = ""; // taastab algse stiili
+    
     authRight.innerText = "Logi sisse";
     
-    // 2. Klikk "Logi sisse" nupule avab modali
+    // Klikk "Logi sisse" nupule avab uuesti modali
     authRight.onclick = function(e) {
-      e.preventDefault();
-      const loginModal = document.getElementById('login-modal');
-      if (loginModal) loginModal.style.display = 'flex';
-    };
-    
-    // Võid panna ka vasaku nupu avama sisselogimist, kui soovid
-    authLeft.onclick = function(e) {
       e.preventDefault();
       const loginModal = document.getElementById('login-modal');
       if (loginModal) loginModal.style.display = 'flex';
     };
   }
 });
+
 // See funktsioon käivitub, kui kasutaja vajutab peale joonistamist/nime andmist "Salvesta"
 async function kasitleSalvestamist(objektiAndmed) {
   // objektiAndmed sisaldab: { tuup, koordinaadid, pealkiri, noted }
@@ -1200,9 +1226,11 @@ function avateadusAndmeteHupik(objektiAndmed, user) {
     }
   };
 }
-await supabase.from('vaatlus_objektid')
-              .update({ staatus: 'lukustatud_omanik' })
-              .eq('id', objektiId);
+async function muudaObjektiOlekut(id, uuendus) {
+  const { error } = await window.supabase.from('vaatlus_objektid').update(uuendus).eq('id', id);
+  // ... ülejäänud sõnumid
+}
+
 /**
  * Universaalne funktsioon objekti infoakna avamiseks ja õiguste kontrolliks
  * @param {Object} objekt - Supabase-ist laetud vaatlusobjekti andmed
@@ -1332,8 +1360,10 @@ function looTegevusteKonteiner(modal) {
   return div;
 }
 
+
 // Abifunktsioon kiireteks olekumuutusteks (Lukustamised/Avanemised)
 async function muudaObjektiOlekut(id, uuendus) {
+  // PARANDATUD: .eq('id', id) tagab, et kasutatakse funktsiooni sisendiks tulnud id-d
   const { error } = await window.supabase.from('vaatlus_objektid').update(uuendus).eq('id', id);
   if (!error) {
     alert("Objekti olek edukalt muudetud!");
@@ -1342,6 +1372,7 @@ async function muudaObjektiOlekut(id, uuendus) {
     alert("Viga oleku muutmisel: " + error.message);
   }
 }
+
 
 // Abifunktsioon andmete salvestamiseks (kui omanik muudab liiki või nähtavust)
 async function salvestaMuudetudAndmed(id) {
