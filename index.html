@@ -6,7 +6,7 @@
   <title>Kaart — Orhideed</title>
 
   <!-- Favicon (inline SVG) -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 120 120%22><g fill=%22%23a3005a%22><circle cx=%2260%22 cy=%2260%22 r=%2240%22/></g></svg>" type="image/svg+xml">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 120 120%22>g fill=%22%23a3005a%22><circle cx=%2260%22 cy=%2260%22 r=%2240%22/></g></svg>" type="image/svg+xml">
 
   <!-- OpenLayers CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v7.4.0/ol.css" />
@@ -16,13 +16,13 @@
   #map { width:100%; height:100vh; position:relative; }
   #map-branding { position:absolute; left:12px; top:12px; display:flex; gap:8px; align-items:center; z-index:2400; pointer-events:none; }
   #orchid-logo-svg { width:44px; height:44px; pointer-events:auto; cursor:pointer; background:rgba(255,255,255,0.95); padding:4px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.08); }
-  #map-title { pointer-events:auto; margin-left:6px; font-weight:700; color:#a3005a; font-size:15px; background:rgba(255,255,255,0.95); padding:4px 8px; border-radius:8px; line-height:1; }
+  #map-title { pointer-events:auto; margin-left:12px; font-weight:700; color:#a3005a; font-size:15px; background:rgba(255,255,255,0.95); padding:4px 8px; border-radius:8px; line-height:1; }
   #tool-ribbon { position:fixed; right:12px; top:56px; display:flex; flex-direction:column; gap:8px; z-index:2440; }
   .rbtn { background:#fff; border:1px solid #eee; padding:8px 10px; border-radius:8px; cursor:pointer; min-width:110px; font-weight:600; }
   
   
 /* Branding ja modal parandused */
-#map-branding { left:12px; top:12px; display:flex; gap:8px; align-items:center; pointer-events:none; z-index:2400; }
+#map-branding { left:25px; top:12px; display:flex; gap:8px; align-items:center; pointer-events:none; z-index:2400; }
 #orchid-logo-svg {
   width:44px; height:44px;
   pointer-events:auto; cursor:pointer;
@@ -32,7 +32,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 #orchid-logo-svg * { pointer-events:none; }
-#map-title { margin-left:6px; font-weight:700; color:#a3005a; font-size:15px; background:rgba(255,255,255,0.95); padding:4px 8px; border-radius:8px; }
+#map-title { margin-left:12px; font-weight:700; color:#a3005a; font-size:15px; background:rgba(255,255,255,0.95); padding:4px 8px; border-radius:8px; }
 
 
 
@@ -64,7 +64,7 @@
     /* Branding (logo + title) overlay on map */
     #map-branding {
       position: absolute;
-      left: 12px;
+      left: 35px;
       top: 12px;
       display:flex;
       align-items:center;
@@ -84,6 +84,15 @@
       padding:4px 8px;
       border-radius:6px;
     }
+    /* Kasutaja auth pill kaardi kohal keskel */
+.auth-pill {
+  position: absolute; top: 1px; left: 50%; transform: translateX(-50%);
+  z-index: 2410; display: flex; border-radius: 8px; overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15); background: #fff;
+}
+.auth-part { padding: 5px 16px; border: none; background: transparent; cursor: pointer; font-size: 13px; font-weight: 600; }
+.auth-part.left { background: #05ee3b; border-right: 1px solid #eeeeee; min-width: 100px; text-align: left; }
+.auth-part.right { background: #665050; color: var(--text-dark); font-weight: 700; }
 
     /* Data source overlay bottom center on map */
     #map-source {
@@ -142,7 +151,7 @@
     #sidebar-pin {
       position: absolute;
       left: -48px;
-      top: 12px;
+      top: 290px;
       background: #ff4da6;
       color: #fff;
       border-radius: 6px;
@@ -310,12 +319,7 @@
         </p>
       </div>
     <!-- LISAME SIIN Logi sisse nupu (pane see täpselt siia) -->
-  <div class="auth-controls-inline" style="margin-left:auto;display:flex;align-items:center;">
-    <button id="login-badge" class="login-badge" type="button" aria-haspopup="dialog"
-      style="background:#fff;border:1px solid #ddd;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:14px;">
-      Logi sisse
-    </button>
-  </div>
+  
 
     </div>
   </div>
@@ -760,9 +764,11 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
         if (i instanceof ol.interaction.DoubleClickZoom) map.removeInteraction(i);
       });
 
-      console.info('Kaart initsialiseeritud (UMD).');
      
-      // --- Sidebar & ribbon behavior + audio unlock ---
+     
+            console.info('Kaart initsialiseeritud (UMD).');
+
+      // --- Külgriba (☰) ja Tööriistariba (✦) klikkide loogika ---
       const sidebarTab = document.getElementById('sidebar-tab');
       const slidingSidebar = document.getElementById('sliding-sidebar');
       const sidebarPin = document.getElementById('sidebar-pin');
@@ -770,279 +776,329 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
       const toolRibbon = document.getElementById('tool-ribbon');
 
       let sidebarPinned = false;
-      let _audioUnlocked = false;
 
-      function playClickSound() {
-        try {
-          const Ctx = window.AudioContext || window.webkitAudioContext;
-          if (!Ctx) return;
-          const ctx = new Ctx();
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.type = 'sine'; o.frequency.value = 880;
-          g.gain.value = 0.0009;
-          o.connect(g); g.connect(ctx.destination);
-          o.start();
-          setTimeout(()=>{ o.stop(); try{ ctx.close(); }catch(e){} }, 60);
-        } catch(e){ /* ignore */ }
+      if (sidebarTab && slidingSidebar) {
+        sidebarTab.addEventListener('click', () => {
+          slidingSidebar.classList.toggle('open');
+          slidingSidebar.classList.toggle('closed');
+          sidebarTab.textContent = slidingSidebar.classList.contains('open') ? '✕' : '☰';
+        });
       }
 
-      function unlockAudio() {
-        if (_audioUnlocked) return;
-        try {
-          const Ctx = window.AudioContext || window.webkitAudioContext;
-          if (!Ctx) { _audioUnlocked = true; return; }
-          const ctx = new Ctx();
-          if (ctx.state === 'suspended') {
-            const resume = () => {
-              ctx.resume().catch(()=>{}).finally(() => {
-                _audioUnlocked = true;
-                window.removeEventListener('click', resume, true);
-                window.removeEventListener('touchstart', resume, true);
-                window.removeEventListener('keydown', resume, true);
-              });
-            };
-            window.addEventListener('click', resume, { capture: true, passive: true });
-            window.addEventListener('touchstart', resume, { capture: true, passive: true });
-            window.addEventListener('keydown', resume, { capture: true, passive: true });
-          } else {
-            _audioUnlocked = true;
-          }
-          setTimeout(()=>{ try{ ctx.close(); }catch(e){} }, 500);
-        } catch(e){ _audioUnlocked = true; }
+      if (sidebarPin && slidingSidebar) {
+        sidebarPin.addEventListener('click', () => {
+          sidebarPinned = !sidebarPinned;
+          sidebarPin.setAttribute('aria-pressed', String(sidebarPinned));
+        });
       }
 
-      function openSidebar() {
-        slidingSidebar.classList.add('open');
-        slidingSidebar.setAttribute('aria-hidden','false');
-        playClickSound();
-      }
-      function closeSidebar() {
-        if (sidebarPinned) return;
-        slidingSidebar.classList.remove('open');
-        slidingSidebar.setAttribute('aria-hidden','true');
+      if (ribbonTab && toolRibbon) {
+        ribbonTab.addEventListener('click', () => {
+          toolRibbon.classList.toggle('hidden');
+        });
       }
 
-      sidebarTab.addEventListener('click', () => {
-        unlockAudio();
-        slidingSidebar.classList.contains('open') ? closeSidebar() : openSidebar();
-      });
-      sidebarTab.addEventListener('mouseenter', openSidebar);
-      slidingSidebar.addEventListener('mouseleave', () => { if (!sidebarPinned) closeSidebar(); });
+      // --- Keskne Modalite Adapter (Haldab Admini ja Sisselogimise akent) ---
+      (function modalAdapter(){
+        const logo = document.getElementById('orchid-logo-svg');
+        const adminModal = document.getElementById('admin-modal');
+        const adminClose = document.getElementById('admin-close');
+        
+        const loginModal = document.getElementById('login-modal');
+        const loginClose = document.getElementById('login-close');
+        const loginBadge = document.getElementById('login-badge');
+        
+        const pageRoot = document.querySelector('main') || document.body;
+        if (!logo || !adminModal) return;
 
-      sidebarPin.addEventListener('click', () => {
-        sidebarPinned = !sidebarPinned;
-        sidebarPin.setAttribute('aria-pressed', String(sidebarPinned));
-        if (!sidebarPinned) closeSidebar();
-      });
+        if (adminModal.parentElement !== document.body) document.body.appendChild(adminModal);
+        if (loginModal && loginModal.parentElement !== document.body) document.body.appendChild(loginModal);
+        
+        adminModal.style.zIndex = '100000';
+        if (loginModal) loginModal.style.zIndex = '100001';
 
-      // ribbon toggle with collision avoidance
-      function openRibbon() {
-        const sidebarOpen = slidingSidebar.classList.contains('open');
-        if (sidebarOpen) {
-          toolRibbon.style.right = (slidingSidebar.offsetWidth + 16) + 'px';
-        } else {
-          toolRibbon.style.right = '12px';
+        function setBackgroundInert(on){
+          try {
+            if ('inert' in HTMLElement.prototype) pageRoot.inert = !!on;
+            else if (on) pageRoot.setAttribute('aria-hidden','true');
+            else pageRoot.removeAttribute('aria-hidden');
+          } catch(e){ console.warn(e); }
         }
-        toolRibbon.classList.remove('hidden');
-        toolRibbon.setAttribute('aria-hidden','false');
-      }
-      function closeRibbon() {
-        toolRibbon.classList.add('hidden');
-        toolRibbon.setAttribute('aria-hidden','true');
-        toolRibbon.style.right = '12px';
-      }
 
-      ribbonTab.addEventListener('click', () => {
-        unlockAudio();
-        if (toolRibbon.classList.contains('hidden')) { openRibbon(); playClickSound(); }
-        else { closeRibbon(); playClickSound(); }
-      });
+        function openAdminModal(e){
+          e && e.stopPropagation();
+          setBackgroundInert(true);
+          adminModal.style.display = 'flex';
+          adminModal.setAttribute('aria-hidden','false');
+          adminModal.classList.add('open');
+        }
 
-      // swipe to close for sidebar
-      let touchStartX = null;
-      slidingSidebar.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
-      slidingSidebar.addEventListener('touchend', (e) => {
-        if (!touchStartX) return;
-        const dx = e.changedTouches[0].clientX - touchStartX;
-        if (dx < -40 && !sidebarPinned) closeSidebar();
-        touchStartX = null;
-      });
+        function closeAdminModal(){
+          adminModal.classList.remove('open');
+          adminModal.setAttribute('aria-hidden','true');
+          adminModal.style.display = 'none';
+          setBackgroundInert(false);
+        }
 
-      // remove loader when map rendered
-      map.once('rendercomplete', () => {
-        setTimeout(() => {
-          const loader = document.getElementById('page-loader');
-          if (loader) { loader.style.transition='opacity 220ms'; loader.style.opacity='0'; setTimeout(()=>loader.remove(),240); }
-        }, 120);
-      });
+        function openLoginModal(e){
+          e && e.stopPropagation();
+          adminModal.style.display = 'none';
+          adminModal.classList.remove('open');
+          adminModal.setAttribute('aria-hidden','true');
 
-(function modalAdapter(){
-  const logo = document.getElementById('orchid-logo-svg');
-  const adminModal = document.getElementById('admin-modal');
-  const adminClose = document.getElementById('admin-close');
-  const pageRoot = document.querySelector('main') || document.body;
-  if (!logo || !adminModal) return;
+          if (loginModal) {
+            loginModal.style.display = 'flex';
+            loginModal.classList.add('open');
+            loginModal.setAttribute('aria-hidden','false');
+            const loginEmail = document.getElementById('login-email');
+            if (loginEmail) loginEmail.focus();
+          }
+        }
 
-  if (adminModal.parentElement !== document.body) document.body.appendChild(adminModal);
-  adminModal.style.zIndex = '100000';
+        function closeLoginModal(){
+          if (loginModal) {
+            loginModal.classList.remove('open');
+            loginModal.setAttribute('aria-hidden','true');
+            loginModal.style.display = 'none';
+          }
+          setBackgroundInert(false);
+        }
 
-  function setBackgroundInert(on){
-    try {
-      if ('inert' in HTMLElement.prototype) pageRoot.inert = !!on;
-      else if (on) pageRoot.setAttribute('aria-hidden','true');
-      else pageRoot.removeAttribute('aria-hidden');
-    } catch(e){ console.warn(e); }
-  }
+        logo.addEventListener('click', openAdminModal);
+        if (adminClose) adminClose.addEventListener('click', closeAdminModal);
+        if (loginBadge) loginBadge.addEventListener('click', openLoginModal);
+        if (loginClose) loginClose.addEventListener('click', closeLoginModal);
 
-  function openModal(e){
-    e && e.stopPropagation();
-    setBackgroundInert(true);
-    adminModal.style.display = 'flex';
-    adminModal.setAttribute('aria-hidden','false');
-    adminModal.classList.add('open');
-    const f = adminModal.querySelector('button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])');
-    if (f) f.focus();
-  }
+        window.addEventListener('click', (ev) => {
+          if (ev.target === adminModal) closeAdminModal();
+          if (ev.target === loginModal) closeLoginModal();
+        });
 
-  function closeModal(){
-    adminModal.classList.remove('open');
-    adminModal.setAttribute('aria-hidden','true');
-    adminModal.style.display = 'none';
-    setBackgroundInert(false);
-    try { logo.focus(); } catch(e){}
-  }
+        window.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Escape') {
+            if (loginModal && loginModal.style.display === 'flex') { ev.preventDefault(); closeLoginModal(); }
+            else if (adminModal.style.display === 'flex') { ev.preventDefault(); closeAdminModal(); }
+          }
+        });
+      })();
 
-  try { if (logo._adminClickHandler) logo.removeEventListener('click', logo._adminClickHandler); } catch(e){}
-  logo._adminClickHandler = openModal;
-  logo.addEventListener('click', openModal);
+      // --- SVG lisamine modali pildi asemele ---
+      (function(){
+        const modal = document.getElementById('admin-modal');
+        if(!modal) return;
+        const img = modal.querySelector('img[alt="Orhidee"]') || modal.querySelector('img');
+        const svgHTML = `<div id="modal-branding" aria-hidden="false">
+          <svg id="orchid-logo-svg" width="48" height="48" viewBox="0 0 120 120" xmlns="http://w3.org" role="img" aria-label="Orhidee logo" tabindex="0" style="width:48px;height:48px;border-radius:6px;display:block">
+            <title>Orhidee</title>
+            <g fill="none" stroke="#a3005a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M60 18c6 0 12 4 14 9 2 5 1 10-2 14-3 4-8 6-12 6s-9-2-12-6c-3-4-4-9-2-14 2-5 8-9 14-9z"/>
+              <path d="M60 36c8 0 16 6 20 12 4 6 4 14 0 20-4 6-12 10-20 10s-16-4-20-10c-4-6-4-14 0-20 4-6 12-12 20-12z"/>
+              <path d="M36 44c6-2 12 0 16 4"/>
+              <path d="M84 44c-6-2-12 0-16 4"/>
+              <path d="M60 56c4 0 8 3 8 6s-4 6-8 6-8-3-8-6 4-6 8-6z"/>
+              <path d="M60 70v12"/>
+              <path d="M52 30c-6 6-10 14-10 22"/>
+              <path d="M68 30c6 6 10 14 10 22"/>
+            </g>
+          </svg>
+        </div>`;
+        if(img) {
+          img.insertAdjacentHTML('afterend', svgHTML);
+          img.remove();
+        } else {
+          modal.querySelector('.modal-card > div')?.insertAdjacentHTML('afterbegin', svgHTML);
+        }
+      })();
 
-  if (adminClose) adminClose.addEventListener('click', closeModal);
-  adminModal.addEventListener('click', (ev) => { if (ev.target === adminModal) closeModal(); });
-
-  window.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape' && adminModal.style.display === 'flex') { ev.preventDefault(); closeModal(); }
-    if (ev.key === 'Tab' && adminModal.style.display === 'flex') {
-      const focusables = Array.from(adminModal.querySelectorAll('button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])')).filter(Boolean);
-      if (focusables.length === 0) return;
-      const idx = focusables.indexOf(document.activeElement);
-      if (ev.shiftKey && idx === 0) { ev.preventDefault(); focusables[focusables.length - 1].focus(); }
-      else if (!ev.shiftKey && idx === focusables.length - 1) { ev.preventDefault(); focusables[0].focus(); }
-    }
-  });
-})();
-
-    
-(function(){
-  const modal = document.getElementById('admin-modal');
-  if(!modal) return console.log('admin-modal puudub');
-  const img = modal.querySelector('img[alt="Orhidee"]') || modal.querySelector('img');
-  const svgHTML = `<div id="modal-branding" aria-hidden="false">
-    <svg id="orchid-logo-svg" width="48" height="48" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Orhidee logo" tabindex="0" style="width:48px;height:48px;border-radius:6px;display:block">
-      <title>Orhidee</title>
-      <g fill="none" stroke="#a3005a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M60 18c6 0 12 4 14 9 2 5 1 10-2 14-3 4-8 6-12 6s-9-2-12-6c-3-4-4-9-2-14 2-5 8-9 14-9z"/>
-        <path d="M60 36c8 0 16 6 20 12 4 6 4 14 0 20-4 6-12 10-20 10s-16-4-20-10c-4-6-4-14 0-20 4-6 12-12 20-12z"/>
-        <path d="M36 44c6-2 12 0 16 4"/>
-        <path d="M84 44c-6-2-12 0-16 4"/>
-        <path d="M60 56c4 0 8 3 8 6s-4 6-8 6-8-3-8-6 4-6 8-6z"/>
-        <path d="M60 70v12"/>
-        <path d="M52 30c-6 6-10 14-10 22"/>
-        <path d="M68 30c6 6 10 14 10 22"/>
-      </g>
-    </svg>
-  </div>`;
-  if(img) img.insertAdjacentHTML('afterend', svgHTML), img.remove();
-  else modal.querySelector('.modal-card > div')?.insertAdjacentHTML('afterbegin', svgHTML);
-  console.log('Inline SVG lisatud modali');
-})();
-
-
-
-
-
+      // Eemaldame lehe laadija ekraanilt, kuna kaart sai edukalt valmis
+      const loader = document.getElementById('page-loader');
+      if (loader) loader.style.display = 'none';
 
     } // end initApp
   </script>
-  
-<div id="login-modal" class="modal-backdrop" style="display:none">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
-    <button id="login-close" class="modal-close" aria-label="Sulge">✕</button>
-    <h3 id="login-title">Logi sisse e‑postiga</h3>
-    <input id="login-email" type="email" placeholder="Sinu e‑post" />
-    <button id="login-send" type="button">Saada Magic Link</button>
-    <p id="login-msg" style="color:#666;font-size:13px"></p>
-    <div style="margin-top:8px">
-      <button id="logout-btn" style="display:none" type="button">Logi välja</button>
+
+  <!-- KESKNE JA AINUS SUPABASE SISSILOGIMISE MODAL (Magic Link) -->
+  <div id="login-modal" class="modal-backdrop" style="display:none">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
+      <button id="login-close" class="modal-close" aria-label="Sulge">✕</button>
+      <h3 id="login-title" style="margin-top:0; color:#a3005a;">Logi sisse e‑postiga</h3>
+      <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
+        <input id="login-email" type="email" placeholder="Sinu e‑post" style="padding:8px; border:1px solid #ccc; border-radius:6px; width:100%; box-sizing:border-box;" />
+        <button id="login-send" type="button" style="background:#a3005a; color:#fff; border:none; padding:10px; border-radius:6px; font-weight:700; cursor:pointer;">Saada Magic Link</button>
+      </div>
+      <p id="login-msg" style="color:#666; font-size:13px; margin-top:8px; min-height:18px;"></p>
+      <div style="margin-top:8px">
+        <button id="logout-btn" style="display:none" type="button">Logi välja</button>
+      </div>
     </div>
   </div>
-</div>
-<!-- tavaline skript: avab admin‑modali sees oleva login modal'i -->
-<script>
-document.addEventListener('click', function (e) {
-  if (e.target && e.target.id === 'login-badge') {
-    // kui sul on eraldi login modal (login-modal), ava see; muidu avame admin‑modali
+
+  <!-- KASUTAJA AUTH PILL (Supabase seisundite kuvamiseks) -->
+  <div id="auth-pill" class="auth-pill" role="region" aria-label="Kasutaja juhtimine">
+    <button id="auth-left" class="auth-part left" title="Uudistaja">Uudistaja</button>
+    <button id="auth-right" class="auth-part right" aria-haspopup="dialog" aria-controls="login-modal">Logi sisse</button>
+  </div>
+
+  <!-- SUPABASE INTEGRATSIOONIMUUDEL -->
+  <script type="module">
+    import { supabase, initAuth, ensureUserRow } from './supabase-client.js';
+
+    const leftBtn = document.getElementById('auth-left');
+    const rightBtn = document.getElementById('auth-right');
+    const loginSend = document.getElementById('login-send');
+    const loginEmail = document.getElementById('login-email');
+    const loginMsg = document.getElementById('login-msg');
+    const logoutBtn = document.getElementById('logout-btn');
     const loginModal = document.getElementById('login-modal');
-    if (loginModal) { loginModal.style.display = 'flex'; return; }
-    const adminModal = document.getElementById('admin-modal');
-    if (adminModal) { adminModal.style.display = 'flex'; adminModal.setAttribute('aria-hidden','false'); }
-  }
-});
-</script>
+
+    let frontendUser = null;
+
+    function setLoggedOutState() {
+      if (leftBtn) leftBtn.textContent = 'Uudistaja';
+      if (rightBtn) {
+        rightBtn.textContent = 'Logi sisse';
+        rightBtn.onclick = () => { if(loginModal) loginModal.style.display = 'flex'; };
+      }
+    }
+
+    function setLoggedInState(email) {
+      const username = (email || '').split('@')[0] || 'Kasutaja';
+      if (leftBtn) leftBtn.textContent = username;
+      if (rightBtn) {
+        rightBtn.textContent = 'Logi välja';
+        rightBtn.onclick = async () => {
+          await supabase.auth.signOut();
+          frontendUser = null;
+          setLoggedOutState();
+          updateAuthUI();
+        };
+      }
+    }
+
+    if (loginSend) {
+      loginSend.addEventListener('click', async () => {
+        const email = (loginEmail?.value || '').trim();
+        if (!email) { loginMsg.textContent = 'Sisesta kehtiv e‑post'; return; }
+        loginMsg.textContent = 'Saadan linki…';
+        const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href }});
+        if (error) loginMsg.textContent = 'Viga: ' + error.message;
+        else loginMsg.textContent = 'Saatsime lingi sinu e‑postile. Ava link, et sisse logida.';
+      });
+    }
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        frontendUser = null;
+        setLoggedOutState();
+        updateAuthUI();
+      });
+    }
+
+    function updateAuthUI() {
+      const badge = document.getElementById('login-badge');
 
 
-<script type="module">
-import { supabase, initAuth, ensureUserRow } from './supabase-client.js'; // kontrolli, et fail on õiges kohas
-
-const loginSend = document.getElementById('login-send');
-const loginClose = document.getElementById('login-close');
-const loginEmail = document.getElementById('login-email');
-const loginMsg = document.getElementById('login-msg');
-const logoutBtn = document.getElementById('logout-btn');
-
-let frontendUser = null;
-
-if (loginClose) loginClose.addEventListener('click', () => { document.getElementById('login-modal').style.display = 'none'; loginMsg.textContent = ''; });
-if (logoutBtn) logoutBtn.addEventListener('click', async () => { await supabase.auth.signOut(); frontendUser = null; updateAuthUI(); });
-
-if (loginSend) loginSend.addEventListener('click', async () => {
-  const email = (loginEmail?.value || '').trim();
-  if (!email) { loginMsg.textContent = 'Sisesta kehtiv e‑post'; return; }
-  loginMsg.textContent = 'Saadan linki…';
-  const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href }});
-  if (error) loginMsg.textContent = 'Viga: ' + error.message;
-  else loginMsg.textContent = 'Saatsime lingi sinu e‑postile. Ava link, et sisse logida.';
-});
-
-await initAuth(async (sessionUser) => {
-  if (!sessionUser) { frontendUser = null; updateAuthUI(); return; }
-  const row = await ensureUserRow(sessionUser.email, sessionUser.user_metadata?.full_name || null);
-  frontendUser = { id: row.id, email: row.email, role: row.role || 'user', display_name: row.display_name };
-  updateAuthUI();
-});
-
-function updateAuthUI() {
-  const badge = document.getElementById('login-badge');
-  if (!badge) return;
-  if (frontendUser) {
-    badge.textContent = frontendUser.display_name || frontendUser.email;
-    if (logoutBtn) logoutBtn.style.display = 'inline-block';
-    if (loginEmail) loginEmail.style.display = 'none';
-    if (loginSend) loginSend.style.display = 'none';
-    loginMsg.textContent = 'Sisse logitud';
-    const lm = document.getElementById('login-modal'); if (lm) lm.style.display = 'none';
-  } else {
-    badge.textContent = 'Logi sisse';
-    if (logoutBtn) logoutBtn.style.display = 'none';
-    if (loginEmail) loginEmail.style.display = 'inline-block';
-    if (loginSend) loginSend.style.display = 'inline-block';
-    loginMsg.textContent = '';
-  }
+if (frontendUser) {
+if (badge) badge.textContent = frontendUser.display_name || frontendUser.email;
+if (logoutBtn) logoutBtn.style.display = 'inline-block';
+if (loginEmail) loginEmail.style.display = 'none';
+if (loginSend) loginSend.style.display = 'none';
+if (loginMsg) loginMsg.textContent = 'Sisse logitud';
+if (loginModal) loginModal.style.display = 'none';
+} else {
+if (badge) badge.textContent = 'Logi sisse';
+if (logoutBtn) logoutBtn.style.display = 'none';
+if (loginEmail) loginEmail.style.display = 'inline-block';
+if (loginSend) loginSend.style.display = 'inline-block';
 }
+}
+// Käivitame Supabase auth kuulamise
+try {
+await initAuth(async (sessionUser) => {
+if (!sessionUser) { frontendUser = null; setLoggedOutState(); updateAuthUI(); return; }
+const row = await ensureUserRow(sessionUser.email, sessionUser.user_metadata?.full_name || null);
+frontendUser = { id: row.id, email: row.email, role: row.role || 'user', display_name: row.display_name };
+setLoggedInState(row.email);
+updateAuthUI();
+});
+} catch(e) {
+console.warn("Supabase ootel.", e);
+setLoggedOutState();
+}
+    // Paigutame kasutajapilli (auth-pill) korrektselt kaardi peale keskele
+    const pill = document.getElementById('auth-pill');
+    const mapContainer = document.getElementById('map');
+    if (pill && mapContainer) {
+      if (pill.parentElement !== mapContainer) {
+        mapContainer.insertBefore(pill, mapContainer.firstChild);
+      }
+    }
+    // Käivitame auth-oleku kuulamise ja nuppude uuendamise
+window.initAuth(async (user) => {
+  const authLeft = document.getElementById('auth-left');
+  const authRight = document.getElementById('auth-right');
+  
+  if (!authLeft || !authRight) return;
 
-window.appAuth = { getUser: () => frontendUser };
-</script>
+  if (user) {
+    // === KASUTAJA ON SISSE LOGITUD ===
+    
+    // Laadime andmed tabelist 'users', et saada kätte display_name
+    const userRow = await window.loadUserRow();
+    
+    // 1. Vasakpoolne nupp asendub kasutajanimega (display_name või meili algus)
+    if (userRow && userRow.display_name) {
+      authLeft.innerText = userRow.display_name;
+      authLeft.title = `Sisse logitud: ${userRow.display_name}`;
+    } else {
+      authLeft.innerText = user.email.split('@')[0];
+    }
+    
+    // 2. Parempoole nupp asendub tekstiga "Logi välja"
+    authRight.innerText = "Logi välja";
+    
+    // 3. Väljalogimise klikkimise loogika koos kinnitusega
+    authRight.onclick = async function(e) {
+      e.preventDefault();
+      
+      const kinnita = confirm("Kas olete kindel, et soovite välja logida?");
+      if (kinnita) {
+        const { error } = await window.supabase.auth.signOut();
+        if (!error) {
+          window.location.reload();
+        }
+      }
+    };
+    
+    // Sisselogituna ei pea vasakule nupule midagi juhtuma
+    authLeft.onclick = null;
 
+  } else {
+    // === KASUTAJA POLE SISSE LOGITUD ===
+    
+    // 1. Taastame algsed tekstid
+    authLeft.innerText = "Uudistaja";
+    authLeft.title = "Uudistaja";
+    authRight.innerText = "Logi sisse";
+    
+    // 2. Klikk "Logi sisse" nupule avab modali
+    authRight.onclick = function(e) {
+      e.preventDefault();
+      const loginModal = document.getElementById('login-modal');
+      if (loginModal) loginModal.style.display = 'flex';
+    };
+    
+    // Võid panna ka vasaku nupu avama sisselogimist, kui soovid
+    authLeft.onclick = function(e) {
+      e.preventDefault();
+      const loginModal = document.getElementById('login-modal');
+      if (loginModal) loginModal.style.display = 'flex';
+    };
+  }
+});
+
+  </script>
 </body>
 </html>
 
