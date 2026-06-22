@@ -494,66 +494,27 @@
         map.addInteraction(snapInteraction);
 
       
+// GLOBAALNE HOIDLA: Siia kogume joonistatud kujundid enne Toolbarist "Salvesta" vajutamist
+window.currentDrawingFeatures = [];
+
 drawInteraction.on('drawend', (evt) => {
-  try {
-    const feature = evt.feature;
-    const geometry = feature.getGeometry();
-    const geometryType = geometry.getType(); 
-    
-    // Teisendame koordinaadid kaardi formaati
-    const clonedGeometry = geometry.clone().transform('EPSG:3857', 'EPSG:4326');
-    const coordsArray = clonedGeometry.getCoordinates();
-
-    console.log("Joonistatud:", geometryType, coordsArray);
-
-    const modal = document.getElementById('science-modal');
-    
-    // OTSEKONTROLL: Kas kasutaja on profiles tabelis sisse logitud spetsialist?
-    // Kasutame muutujat window.frontendUser, mille initAuth taustal aktiveeris
-    if (window.frontendUser) {
-      
-      if (modal) {
-        // Avame akna
-        modal.style.display = 'block';
-        modal.removeAttribute('inert'); 
-        
-        // PÄÄSTEKÕIS HANGUMISE VASTU: 
-        // Tagame, et pealeht <main> EI OLEKS 'inert', muidu on modal lukus!
-        const mainEl = document.querySelector('main');
-        if (mainEl) mainEl.removeAttribute('inert');
-        
-        const bodyEl = document.body;
-        if (bodyEl) bodyEl.removeAttribute('inert');
-
-        // Salvestame andmed külge
-        modal.dataset.tempCoords = JSON.stringify(coordsArray);
-        modal.dataset.tempType = geometryType;
-        
-        console.log("Spetsialisti aken avatud edukalt.");
-      }
-      
-    } else {
-      // Uudistaja režiim LocalStorage'iga
-      console.log("Uudistaja režiim: Salvestame LocalStorage'isse");
-      const localFeatures = JSON.parse(localStorage.getItem('kuldkingake_local_features') || '[]');
-      localFeatures.push({
-        id: crypto.randomUUID(),
-        tuup: geometryType,
-        koordinaadid: coordsArray,
-        created_at: new Date().toISOString()
-      });
-      localStorage.setItem('kuldkingake_local_features', JSON.stringify(localFeatures));
-      alert("Vaatlus salvestatud kohalikku brauserisse (LocalStorage).");
-    }
-
-  } catch (err) {
-    console.error("Kriitiline viga joonistamise lõpus:", err);
-    // Kui midagi läheb valesti, tagame igal juhul, et leht ei jääks lukku
-    const mainEl = document.querySelector('main');
-    if (mainEl) mainEl.removeAttribute('inert');
-  }
+  const feature = evt.feature;
+  const geometry = feature.getGeometry();
+  const geometryType = geometry.getType();
+  
+  // Teisendame koordinaadid valmis
+  const clonedGeometry = geometry.clone().transform('EPSG:3857', 'EPSG:4326');
+  const coordsArray = clonedGeometry.getCoordinates();
+  
+  // Salvestame info mällu, ootama Toolbari "Salvesta" nuppu
+  window.currentDrawingFeatures.push({
+    tuup: geometryType,
+    koordinaadid: coordsArray,
+    featureId: feature.ol_uid
+  });
+  
+  console.log("Kujund joonistatud ja lisatud ootele. Toolbarist saab salvestada.");
 });
-// SULGEB KORREKTSELT 'drawInteraction.on' SÜNDMUSE
 
 
       }
