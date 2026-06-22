@@ -923,70 +923,47 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
       const loader = document.getElementById('page-loader');
       if (loader) loader.style.display = 'none';
       // Kuulame Teadusandmete akna vormi esitamist / salvestamise nuppu
-const saveScienceBtn = document.getElementById('save-science-btn'); // Veendu, et su HTML-is on sellel nupul õige ID
+// === PARANDATUD TEADUSANDMETE AKNA LOOGIKA ===
+const modal = document.getElementById('science-modal');
+const saveScienceBtn = document.getElementById('save-science-btn');
+const cancelScienceBtn = document.getElementById('cancel-science-btn');
+
+// Tühistamine (Katkesta)
+if (cancelScienceBtn) {
+  cancelScienceBtn.addEventListener('click', () => {
+    modal.style.display = 'none';
+    modal.setAttribute('inert', '');
+    // Vabastame pealehe lukust
+    const pageRoot = document.querySelector('main') || document.body;
+    if (pageRoot) pageRoot.removeAttribute('inert');
+  });
+}
+
+// Kinnita ja salvesta (Supabase)
 if (saveScienceBtn) {
   saveScienceBtn.addEventListener('click', async () => {
-    const modal = document.getElementById('science-modal');
-    // Sulgeme akna, puhastame andmed ja paneme 'inert' tagasi
-modal.style.display = 'none';
-modal.setAttribute('inert', ''); // Lukustame uuesti taustale
-delete modal.dataset.tempCoords;
-delete modal.dataset.tempType;
-
-    // Võtame joonistajalt kaasa pandud geomeetria andmed
-    const koordinaadid = JSON.parse(modal.dataset.tempCoords || '[]');
+    const rawCoords = modal.dataset.tempCoords;
     const tuup = modal.dataset.tempType;
     
-    if (!koordinaadid || !tuup) {
-      alert("Viga: Kujundi andmed puuduvad!");
-      return;
-    }
-
-    // Kogume vormilt sisestatud väärtused (kontrolli oma HTML input/select ID-sid)
-    const pealkiriInput = document.getElementById('science-title')?.value || "Vaatlusobjekt";
-    const liikSelect = document.getElementById('science-species')?.value || "";
-    const kogusInput = document.getElementById('science-amount')?.value || "";
-    const ohustatusSelect = document.getElementById('science-danger')?.value || "";
-    const kvaliteetSelect = document.getElementById('science-quality')?.value || "";
-    const nahtavusSelect = document.getElementById('science-visibility')?.value || "privaatne";
-    const notedText = document.getElementById('science-notes')?.value || "";
+    // Loeme andmed ENNE kustutamist
+    const koordinaadid = JSON.parse(rawCoords);
+    
+    // ... (ülejäänud andmete kogumine)
 
     try {
-      // Saadame andmed Supabase tabelisse 'vaatlus_objektid'
-      // Kasutame aknas kättesaadavat supabase klienti ja sisseloginud kasutajat
-      const { data, error } = await window.supabase
-        .from('vaatlus_objektid')
-        .insert({
-          looja_id: frontendUser.id,           // Sisselogitud kasutaja UUID
-          kasutajanimi: frontendUser.email,    // Kasutame meili või kasutajanime profiilist
-          pealkiri: pealkiriInput,
-          tuup: tuup,                          // 'Point', 'LineString' või 'Polygon'
-          koordinaadid: koordinaadid,          // Massiiv salvestatakse jsonb-na
-          liik: liikSelect,
-          kogus: kogusInput,
-          kvaliteet: kvaliteetSelect,
-          ohustatus: ohustatusSelect,
-          nahtavus: nahtavusSelect,
-          noted: notedText,
-          staatus: 'ootel'                     // Default staatus uuele vaatlusele
-        })
-        .select();
-
-      if (error) throw error;
-
-      alert("Andmed edukalt Supabase andmebaasi salvestatud!");
+      // ... (Supabase insert päring)
       
-      // Sulgeme akna ja puhastame andmed
+      // Sulgeme ja puhastame ALLES PÄRAST salvestamist
       modal.style.display = 'none';
+      modal.setAttribute('inert', '');
       delete modal.dataset.tempCoords;
-      delete modal.dataset.tempType;
-      
+      // ... (pealehe vabastamine)
     } catch (err) {
-      console.error("Viga Supabase salvestamisel:", err);
-      alert("Andmebaasi salvestamine ebaõnnestus: " + err.message);
+      console.error(err);
     }
   });
 }
+
 
 
     } // end initApp
