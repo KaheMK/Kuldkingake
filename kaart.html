@@ -586,7 +586,33 @@ document.getElementById('ribbon-modify')?.addEventListener('click', () => {
   document.querySelectorAll('#tool-ribbon .rbtn').forEach(b => b.classList.remove('active'));
   document.getElementById('ribbon-modify').classList.add('active');
 });
-document.getElementById('ribbon-save')?.addEventListener('click', () => { saveToLocal(); });
+// ASENDA SEE ÜKS RIDA (Umbes real 1335) SELLE KOODIGA:
+document.getElementById('ribbon-save')?.addEventListener('click', () => {
+  // 1. Eemaldame pliiatsi: lülitame joonistamise välja, et kursor vabaneks!
+  if (typeof map !== 'undefined' && typeof drawInteraction !== 'undefined') {
+    map.removeInteraction(drawInteraction);
+    console.log("Pliiats eemaldatud, kursor vaba.");
+  }
+
+  // 2. Võtame andmed ootele ja avame Sinu spetsialisti akna
+  const scienceModal = document.getElementById('science-modal');
+  if (scienceModal) {
+    // Kui midagi joonistati, paneme andmed külge
+    if (window.currentDrawingFeatures && window.currentDrawingFeatures.length > 0) {
+      const lastFeature = window.currentDrawingFeatures[window.currentDrawingFeatures.length - 1];
+      const geom = lastFeature.getGeometry().clone().transform('EPSG:3857', 'EPSG:4326');
+      
+      scienceModal.dataset.tempCoords = JSON.stringify(geom.getCoordinates());
+      scienceModal.dataset.tempType = geom.getType();
+    }
+
+    // Kuvame akna puhtalt ilma pealehte lukustamata
+    scienceModal.style.display = 'block';
+    scienceModal.removeAttribute('inert');
+    scienceModal.removeAttribute('aria-hidden');
+  }
+});
+
 document.getElementById('ribbon-load')?.addEventListener('click', () => { loadFromLocal(); });
 document.getElementById('ribbon-export')?.addEventListener('click', () => { exportGeoJSON(); });
 document.getElementById('btn-finish-draw')?.addEventListener('click', () => {
@@ -764,14 +790,7 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
           toolRibbon.classList.toggle('hidden');
         });
       }
-const toolbarSaveBtn = document.getElementById('toolbar-save-btn'); // Sinu toolbari salvestusnupu ID
 
-if (toolbarSaveBtn) {
-  toolbarSaveBtn.addEventListener('click', () => {
-    if (!window.currentDrawingFeatures || window.currentDrawingFeatures.length === 0) {
-      alert("Kaardil pole ühtegi uut joonistatud kujundit, mida salvestada!");
-      return;
-    }
 
     const modal = document.getElementById('science-modal');
     
