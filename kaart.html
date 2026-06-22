@@ -495,39 +495,55 @@
 
       
  drawInteraction.on('drawend', async (evt) => {
-  const feature = evt.feature;
-  const geometry = feature.getGeometry();
-  const geometryType = geometry.getType(); // 'Point', 'LineString' või 'Polygon'
-  
-  // Teisendame koordinaadid OpenLayersi projektorist (EPSG:3857) tavalisse kaardi formaati (EPSG:4326)
-  const clonedGeometry = geometry.clone().transform('EPSG:3857', 'EPSG:4326');
-  const coordsArray = clonedGeometry.getCoordinates();
-
-  console.log("Joonistatud:", geometryType, coordsArray);
-
-  // KONTROLL: Kas kasutaja on sisse loginud (kas window.supabase.auth.getSession() on aktiivne)
-  // Kasutame Sinu olemasolevat muutujat, mis viitab sisselogitud kasutajale (nt currentUser või frontendUser)
-  const { data: { session } } = await window.supabase.auth.getSession();
-
-  if (session && session.user) {
-  // KASUTAJA ON LOGITUD SPETSIALIST -> Avame Sinu teadusandmete akna
-  const modal = document.getElementById('science-modal');
-  if (modal) {
-    modal.style.display = 'block';
+  try {
+    const feature = evt.feature;
+    const geometry = feature.getGeometry();
+    const geometryType = geometry.getType(); // 'Point', 'LineString' või 'Polygon'
     
-    // LAHENDUS: Eemaldame 'inert' atribuudi, et aken poleks tuim!
-    modal.removeAttribute('inert'); 
-    
-    // Salvestame geomeetria andmed ajutiselt modali külge
-    modal.dataset.tempCoords = JSON.stringify(coordsArray);
-    modal.dataset.tempType = geometryType;
-  } else {
-    console.error("Viga: Elementi nimega 'science-modal' ei leitud lehelt!");
+    // Teisendame koordinaadid OpenLayersi projektorist (EPSG:3857) tavalisse kaardi formaati (EPSG:4326)
+    const clonedGeometry = geometry.clone().transform('EPSG:3857', 'EPSG:4326');
+    const coordsArray = clonedGeometry.getCoordinates();
+
+    console.log("Joonistatud:", geometryType, coordsArray);
+
+    // KONTROLL: Küsime aktiivset Supabase sessiooni
+    const { data: { session } } = await window.supabase.auth.getSession();
+
+    if (session && session.user) {
+      // === SPETSIALISTI HARU ===
+      const modal = document.getElementById('science-modal');
+      if (modal) {
+        modal.style.display = 'block';
+        modal.removeAttribute('inert'); // Eemaldame lukustuse, et aken poleks tuim!
+        
+        // Päästerõngas: tagame, et pealeht ei lukustaks modali klikke
+        const mainEl = document.querySelector('main');
+        if (mainEl) mainEl.removeAttribute('inert'); 
+        
+        // Salvestame geomeetria andmed ajutiselt modali külge tekstina
+        modal.dataset.tempCoords = JSON.stringify(coordsArray);
+        modal.dataset.tempType = geometryType;
+      } else {
+        console.error("Viga: Elementi nimega 'science-modal' ei leitud lehelt!");
+      }
+    } else {
+      // === UUDISTAJA HARU ===
+      console.log("Uudistaja režiim: Salvestame LocalStorage'isse");
+      const localFeatures = JSON.parse(localStorage.getItem('kuldkingake_local_features') || '[]');
+      localFeatures.push({
+        id: crypto.randomUUID(),
+        tuup: geometryType,
+        koordinaadid: coordsArray,
+        created_at: new Date().toISOString()
+      });
+      localStorage.setItem('kuldkingake_local_features', JSON.stringify(localFeatures));
+      alert("Vaatlus salvestatud kohalikku brauserisse (LocalStorage).");
+    }
+
+  } catch (err) {
+    console.error("Viga joonistamise töötlemisel:", err);
   }
-}
-
-});
-
+}); // SULGEB KORREKTSELT 'drawInteraction.on' SÜNDMUSE
 
 
       }
@@ -923,43 +939,102 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
       const loader = document.getElementById('page-loader');
       if (loader) loader.style.display = 'none';
       // Kuulame Teadusandmete akna vormi esitamist / salvestamise nuppu
-// === PARANDATUD TEADUSANDMETE AKNA LOOGIKA ===
+// === TÄIELIK JA PARANDATUD TEADUSANDMETE AKNA LOOGIKA ===
 const modal = document.getElementById('science-modal');
 const saveScienceBtn = document.getElementById('save-science-btn');
 const cancelScienceBtn = document.getElementById('cancel-science-btn');
 
-// Tühistamine (Katkesta)
+// 1. TÜHISTAMINE (Katkesta nupp)
 if (cancelScienceBtn) {
   cancelScienceBtn.addEventListener('click', () => {
+    console.log("Kasutaja tühistas vaatluse salvestamise.");
     modal.style.display = 'none';
-    modal.setAttribute('inert', '');
+    modal.setAttribute('inert', ''); // Lukustame modali uuesti taustale
+    
+    // Puhastame ajutised geomeetria andmed, kuna salvestamist ei toimunud
+    delete modal.dataset.tempCoords;
+    delete modal.dataset.tempType;
+
     // Vabastame pealehe lukust
     const pageRoot = document.querySelector('main') || document.body;
     if (pageRoot) pageRoot.removeAttribute('inert');
   });
 }
 
-// Kinnita ja salvesta (Supabase)
+// 2. KINNITA JA SALVESTA (Supabase insert päring)
 if (saveScienceBtn) {
-  saveScienceBtn.addEventListener('click', async () => {
+  saveScienceBtn.addEventListener('click', async (e) => {
+    e.preventDefault(); // Takistame lehe anomaalset värskendamist klikkimisel
+    console.log("Alustan andmete kogumist ja Supabasesse saatmist...");
+
     const rawCoords = modal.dataset.tempCoords;
     const tuup = modal.dataset.tempType;
     
-    // Loeme andmed ENNE kustutamist
-    const koordinaadid = JSON.parse(rawCoords);
-    
-    // ... (ülejäänud andmete kogumine)
+    // Kontrollime, et andmed on olemas
+    if (!rawCoords || !tuup) {
+      alert("Viga: Kujundi geomeetria andmed on kadunud! Palun joonista ala uuesti.");
+      return;
+    }
 
     try {
-      // ... (Supabase insert päring)
+      // Loeme koordinaadid sisse ENNE andmete kustutamist
+      const koordinaadid = JSON.parse(rawCoords);
       
-      // Sulgeme ja puhastame ALLES PÄRAST salvestamist
+      // Küsime aktiivse sessiooni kasutaja andmed looja_id jaoks
+      const { data: { session }, error: authError } = await window.supabase.auth.getSession();
+      if (authError || !session || !session.user) {
+        alert("Viga: Sessioon puudub või on aegunud. Palun logi uuesti sisse.");
+        return;
+      }
+
+      // Kogume Sinu HTML vormi väljadelt reaalsed kasutaja sisestatud väärtused
+      const pealkiriVal = document.getElementById('science-title')?.value || "Uus vaatlusala";
+      const liikVal = document.getElementById('science-species')?.value || "Määramata";
+      const kogusVal = document.getElementById('science-amount')?.value || "1";
+      const ohustatusVal = document.getElementById('science-danger')?.value || "Madal";
+      const kvaliteetVal = document.getElementById('science-quality')?.value || "Keskpärane";
+      const nahtavusVal = document.getElementById('science-visibility')?.value || "privaatne";
+      const notedVal = document.getElementById('science-notes')?.value || "";
+
+      console.log("Saadan andmed tabelisse 'vaatlus_objektid'...", { tuup, looja_id: session.user.id });
+
+      // Teeme reaalse insert päringu Supabase andmebaasi
+      const { data, error } = await window.supabase
+        .from('vaatlus_objektid')
+        .insert({
+          looja_id: session.user.id,          // Kohustuslik (UUID)
+          kasutajanimi: session.user.email,   // Kohustuslik (TEXT)
+          pealkiri: pealkiriVal,              // Kohustuslik (TEXT)
+          tuup: tuup,                         // Kohustuslik (TEXT)
+          koordinaadid: koordinaadid,         // Kohustuslik (JSONB)
+          liik: liikVal,
+          kogus: kogusVal,
+          kvaliteet: kvaliteetVal,
+          ohustatus: ohustatusVal,
+          nahtavus: nahtavusVal,
+          noted: notedVal,
+          staatus: 'ootel'                    // Vaikimisi staatus uuele vaatlusele
+        })
+        .select();
+
+      if (error) throw error; // Kui Supabase tagastab vea, viskame selle catch plokki
+
+      console.log("Salvestamine õnnestus täielikult:", data);
+      alert("Andmed on edukalt pilve salvestatud!");
+      
+      // Sulgeme ja puhastame ALLES PÄRAST edukat salvestamist
       modal.style.display = 'none';
       modal.setAttribute('inert', '');
       delete modal.dataset.tempCoords;
-      // ... (pealehe vabastamine)
+      delete modal.dataset.tempType;
+      
+      // Vabastame pealehe lukust
+      const pageRoot = document.querySelector('main') || document.body;
+      if (pageRoot) pageRoot.removeAttribute('inert');
+
     } catch (err) {
-      console.error(err);
+      console.error("Kriitiline viga Supabase salvestamisel:", err);
+      alert("Andmebaasi salvestamine ebaõnnestus: " + (err.message || JSON.stringify(err)));
     }
   });
 }
