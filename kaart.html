@@ -148,7 +148,7 @@
       background: linear-gradient(180deg,#ff4da6,#c2185b);
       border-radius: 6px 0 0 6px;
     }
-   /* TÖÖRIISTARIBA (RIBBON) & KÜLGRIBA LIUGLEMINE (Sarnane hover-loogika) */
+/* TÖÖRIISTARIBA (RIBBON) & KÜLGRIBA LIUGLEMINE (Sarnane hover-loogika) */
 #tool-ribbon, #sliding-sidebar {
   transition: right 300ms cubic-bezier(.2,.9,.3, 1), opacity 200ms ease;
   display: flex !important; /* display: none asemel */
@@ -300,7 +300,7 @@
         </p>
       </div>
     <!-- LISAME SIIN Logi sisse nupu (pane see täpselt siia) -->
-      <button id="login-badge" class="login-badge">🔒 Logi sisse spetsialistina</button>
+     <button id="login-badge" class="login-badge">🔒 Logi sisse spetsialistina</button>
   
 
     </div>
@@ -383,7 +383,7 @@
         document.head.appendChild(s2);
       };
       document.head.appendChild(s);
-    })();
+    })(initApp);
 
     function initApp(){
       // set mobile vh var
@@ -484,6 +484,9 @@ drawInteraction.on('drawend', (evt) => {
   window.currentDrawingFeatures.push(evt.feature);
   console.log("Kujund joonistatud ja lisatud ootele. Ootab Toolbarist Salvesta klikki.");
 });
+
+
+
 
 
 
@@ -790,7 +793,14 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
           toolRibbon.classList.toggle('hidden');
         });
       }
+      const toolbarSaveBtn = document.getElementById('toolbar-save-btn'); // Sinu toolbari salvestusnupu ID
 
+if (toolbarSaveBtn) {
+  toolbarSaveBtn.addEventListener('click', () => {
+    if (!window.currentDrawingFeatures || window.currentDrawingFeatures.length === 0) {
+      alert("Kaardil pole ühtegi uut joonistatud kujundit, mida salvestada!");
+      return;
+    }
 
     const modal = document.getElementById('science-modal');
     
@@ -933,7 +943,7 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
       // Eemaldame lehe laadija ekraanilt, kuna kaart sai edukalt valmis
       const loader = document.getElementById('page-loader');
       if (loader) loader.style.display = 'none';
-      // Kuulame Teadusandmete akna vormi esitamist / salvestamise nuppu
+
 // === TÄIELIK JA PARANDATUD TEADUSANDMETE AKNA LOOGIKA ===
 const modal = document.getElementById('science-modal');
 const saveScienceBtn = document.getElementById('save-science-btn');
@@ -1606,7 +1616,6 @@ async function laeKõikKaardiAndmed() {
 window.avatäpsustatudObjektiModal = async function(objekt, sisseLogitudKasutaja, isNew = false) {
   // ... (vt funktsionaalsuse ja lukkude lisamiseks)
 };
-// Ootame, kuni leht on laetud ja otsime Sinu salvestamise nupu
 document.addEventListener('DOMContentLoaded', () => {
   const modal = document.getElementById('science-modal');
   const saveBtn = document.getElementById('save-science-btn');
@@ -1705,6 +1714,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function coordsArrayFix(str) {
   return str;
 }
+
 // =========================================================================
 // 1. JOONISTAMISE LÕPETAMISE REEGEL (Salvestab kujundid ootele, ei ava midagi)
 // =========================================================================
@@ -1968,7 +1978,9 @@ if (saveScienceBtn) {
     }
   });
 }
-    
+
+
+
   </script>
   <!-- TEADUSANDMETE TÄITMISE MODAL SPETSIALISTILE -->
 <div id="science-modal" class="modal-backdrop" style="display:none; z-index:100005;">
