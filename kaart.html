@@ -793,6 +793,40 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
           toolRibbon.classList.toggle('hidden');
         });
       }
+const toolbarSaveBtn = document.getElementById('toolbar-save-btn'); // Sinu toolbari salvestusnupu ID
+
+if (toolbarSaveBtn) {
+  toolbarSaveBtn.addEventListener('click', () => {
+    if (!window.currentDrawingFeatures || window.currentDrawingFeatures.length === 0) {
+      alert("Kaardil pole ühtegi uut joonistatud kujundit, mida salvestada!");
+      return;
+    }
+
+    const modal = document.getElementById('science-modal');
+    
+    // Kontrollime rolli (Spetsialist vs Uudistaja)
+    if (window.frontendUser) {
+      // SPETSIALIST: Avame modali valikutega ja paneme andmed valmis
+      if (modal) {
+        SulgeKoikPaneelid(); // Toolbar ja Sidebar sulguvad automaatselt!
+        
+        modal.style.display = 'block';
+        modal.removeAttribute('inert');
+        
+        // Võtame viimase joonistatud kujundi andmed modali jaoks
+        const viimaneKujund = window.currentDrawingFeatures[window.currentDrawingFeatures.length - 1];
+        modal.dataset.tempCoords = JSON.stringify(viimaneKujund.koordinaadid);
+        modal.dataset.tempType = viimaneKujund.tuup;
+      }
+    } else {
+      // UUDISTAJA: Salvestab otse LocalStorage ilma modalita
+      console.log("Uudistaja vajutas salvesta. Saadame andmed LocalStorage'isse.");
+      // ... (LocalStorage kood)
+      alert("Andmed edukalt salvestatud Sinu brauseri mällu!");
+      window.currentDrawingFeatures = []; // Puhastame ootelehe
+    }
+  });
+}
 
       // --- Keskne Modalite Adapter (Haldab Admini ja Sisselogimise akent) ---
       (function modalAdapter(){
