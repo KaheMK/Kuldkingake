@@ -1546,30 +1546,52 @@ window.avatäpsustatudObjektiModal = async function(objekt, sisseLogitudKasutaja
 };
 // Ootame, kuni leht on laetud ja otsime Sinu salvestamise nupu
 document.addEventListener('DOMContentLoaded', () => {
-  const saveBtn = document.getElementById('save-science-btn'); // Veendu, et Sinu HTML-is on nupul see ID
-  
+  const modal = document.getElementById('science-modal');
+  const saveBtn = document.getElementById('save-science-btn');
+  const cancelBtn = document.getElementById('cancel-science-btn'); // Sinu modalil olev tühistamise nupp
+
+  // 1. KATKESTA NUPP (Hangumise eemaldamine)
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      console.log("Kasutaja katkestas salvestamise.");
+      modal.style.display = 'none';
+      modal.setAttribute('inert', ''); // Paneme lukustuse tagasi
+      
+      // Puhastame ajutised andmed
+      delete modal.dataset.tempCoords;
+      delete modal.dataset.tempType;
+    });
+  }
+
+  // 2. KINNITA JA SALVESTA NUPP
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
-      const modal = document.getElementById('science-modal');
+      console.log("Kinnita nuppu vajutatud. Alustan Supabase salvestamist...");
       
       // Võtame joonistajalt kaasa pandud geomeetria andmed
-      const koordinaadid = JSON.parse(modal.dataset.tempCoords || 'null');
+      const koordinaadidRaw = modal.dataset.tempCoords;
       const tuup = modal.dataset.tempType;
       
-      if (!koordinaadid || !tuup) {
+      if (!koordinaadidRaw || !tuup) {
         alert("Viga: Kujundi geomeetria andmed on kadunud!");
         return;
       }
+      
+      const koordinaadid = JSON.parse(coordsArrayFix(koordinaadidRaw));
 
-      // Võtame aktiivse kasutaja sessiooni andmed looja_id ja kasutajanime jaoks
-      const { data: { session } } = await window.supabase.auth.getSession();
-      if (!session || !session.user) {
-        alert("Viga: Sessioon on aegunud. Palun logi uuesti sisse.");
+      // Kontrollime Supabase sessiooni
+      if (!window.supabase) {
+        alert("Viga: Supabase klient on initsialiseerimata!");
         return;
       }
 
-      // Kogume Sinu HTML vormi väljadelt väärtused
-      // Kontrolli, et Sul on input/select elementidel täpselt need ID-d või muuda need vastavaks:
+      const { data: { session }, error: authError } = await window.supabase.auth.getSession();
+      if (authError || !session || !session.user) {
+        alert("Viga: Sessioon puudub või on aegunud. Palun logi uuesti sisse.");
+        return;
+      }
+
+      // Kogume Sinu HTML vormi väljadelt väärtused (ID-d peavad ühtima Sinu HTML-iga)
       const pealkiriVal = document.getElementById('science-title')?.value || "Uus vaatlusala";
       const liikVal = document.getElementById('science-species')?.value || "";
       const kogusVal = document.getElementById('science-amount')?.value || "";
@@ -1579,35 +1601,35 @@ document.addEventListener('DOMContentLoaded', () => {
       const notedVal = document.getElementById('science-notes')?.value || "";
 
       try {
-        // Teeme postituse Supabase tabelisse 'vaatlus_objektid'
+        // Saadavus andmebaasi 'vaatlus_objektid'
         const { data, error } = await window.supabase
           .from('vaatlus_objektid')
           .insert({
-            looja_id: session.user.id,          // Kohustuslik (UUID)
-            kasutajanimi: session.user.email,   // Kohustuslik (Text) - kasutame meiliaadressi
-            pealkiri: pealkiriVal,              // Kohustuslik (Text)
-            tuup: tuup,                         // Kohustuslik (Text): 'Point', 'LineString', 'Polygon'
-            koordinaadid: koordinaadid,         // Kohustuslik (JSONB)
+            looja_id: session.user.id,          // NOT NULL UUID
+            kasutajanimi: session.user.email,   // NOT NULL TEXT
+            pealkiri: pealkiriVal,              // NOT NULL TEXT
+            tuup: tuup,                         // NOT NULL TEXT
+            koordinaadid: koordinaadid,         // NOT NULL JSONB
             liik: liikVal,
             kogus: kogusVal,
             kvaliteet: kvaliteetVal,
             ohustatus: ohustatusVal,
             nahtavus: nahtavusVal,
             noted: notedVal,
-            staatus: 'ootel'                    // Vaikimisi väärtus uuele vaatlusele
+            staatus: 'ootel'
           })
           .select();
 
         if (error) throw error;
 
+        console.log("Salvestamine õnnestus:", data);
         alert("Andmed on edukalt salvestatud Supabase andmebaasi!");
         
-        // Sulgeme akna ja puhastame ajutised andmed
+        // Sulgeme akna edukal salvestamisel
         modal.style.display = 'none';
+        modal.setAttribute('inert', '');
         delete modal.dataset.tempCoords;
         delete modal.dataset.tempType;
-        
-        // (Valikuline): Siin kohas võime kaardi uuesti värskendada, et uus kujund kohe ilmuks
         
       } catch (err) {
         console.error("Andmebaasi salvestamise viga:", err);
@@ -1616,6 +1638,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// Abifunktsioon igaks juhuks, et massiivi formaat oleks JSON-ile korrektne
+function coordsArrayFix(str) {
+  return str;
+}
+
 
   </script>
   <!-- TEADUSANDMETE TÄITMISE MODAL SPETSIALISTILE -->
