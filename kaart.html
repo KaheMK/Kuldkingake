@@ -494,40 +494,46 @@
         map.addInteraction(snapInteraction);
 
       
- drawInteraction.on('drawend', async (evt) => {
+drawInteraction.on('drawend', (evt) => {
   try {
     const feature = evt.feature;
     const geometry = feature.getGeometry();
-    const geometryType = geometry.getType(); // 'Point', 'LineString' või 'Polygon'
+    const geometryType = geometry.getType(); 
     
-    // Teisendame koordinaadid OpenLayersi projektorist (EPSG:3857) tavalisse kaardi formaati (EPSG:4326)
+    // Teisendame koordinaadid kaardi formaati
     const clonedGeometry = geometry.clone().transform('EPSG:3857', 'EPSG:4326');
     const coordsArray = clonedGeometry.getCoordinates();
 
     console.log("Joonistatud:", geometryType, coordsArray);
 
-    // KONTROLL: Küsime aktiivset Supabase sessiooni
-    const { data: { session } } = await window.supabase.auth.getSession();
-
-    if (session && session.user) {
-      // === SPETSIALISTI HARU ===
-      const modal = document.getElementById('science-modal');
+    const modal = document.getElementById('science-modal');
+    
+    // OTSEKONTROLL: Kas kasutaja on profiles tabelis sisse logitud spetsialist?
+    // Kasutame muutujat window.frontendUser, mille initAuth taustal aktiveeris
+    if (window.frontendUser) {
+      
       if (modal) {
+        // Avame akna
         modal.style.display = 'block';
-        modal.removeAttribute('inert'); // Eemaldame lukustuse, et aken poleks tuim!
+        modal.removeAttribute('inert'); 
         
-        // Päästerõngas: tagame, et pealeht ei lukustaks modali klikke
+        // PÄÄSTEKÕIS HANGUMISE VASTU: 
+        // Tagame, et pealeht <main> EI OLEKS 'inert', muidu on modal lukus!
         const mainEl = document.querySelector('main');
-        if (mainEl) mainEl.removeAttribute('inert'); 
+        if (mainEl) mainEl.removeAttribute('inert');
         
-        // Salvestame geomeetria andmed ajutiselt modali külge tekstina
+        const bodyEl = document.body;
+        if (bodyEl) bodyEl.removeAttribute('inert');
+
+        // Salvestame andmed külge
         modal.dataset.tempCoords = JSON.stringify(coordsArray);
         modal.dataset.tempType = geometryType;
-      } else {
-        console.error("Viga: Elementi nimega 'science-modal' ei leitud lehelt!");
+        
+        console.log("Spetsialisti aken avatud edukalt.");
       }
+      
     } else {
-      // === UUDISTAJA HARU ===
+      // Uudistaja režiim LocalStorage'iga
       console.log("Uudistaja režiim: Salvestame LocalStorage'isse");
       const localFeatures = JSON.parse(localStorage.getItem('kuldkingake_local_features') || '[]');
       localFeatures.push({
@@ -541,9 +547,13 @@
     }
 
   } catch (err) {
-    console.error("Viga joonistamise töötlemisel:", err);
+    console.error("Kriitiline viga joonistamise lõpus:", err);
+    // Kui midagi läheb valesti, tagame igal juhul, et leht ei jääks lukku
+    const mainEl = document.querySelector('main');
+    if (mainEl) mainEl.removeAttribute('inert');
   }
-}); // SULGEB KORREKTSELT 'drawInteraction.on' SÜNDMUSE
+});
+// SULGEB KORREKTSELT 'drawInteraction.on' SÜNDMUSE
 
 
       }
@@ -1117,7 +1127,22 @@ if (saveScienceBtn) {
 
   <!-- SUPABASE INTEGRATSIOONIMUUDEL -->
   <script type="module">
- import { supabase, initAuth, loadUserRow } from './supabase-client.js';
+ import { initAuth, loadUserRow } from './supabase-client.js';
+
+// Kui leht laetakse, käivitub kontroll
+initAuth(async (currentUser) => {
+  if (currentUser) {
+    const profile = await loadUserRow();
+    if (profile) {
+      // Paneme spetsialisti andmed globaalselt kirja
+      window.frontendUser = currentUser; 
+      console.log("Supabase ja HTML leidsid ühise keele. Spetsialist tuvastatud.");
+    }
+  } else {
+    window.frontendUser = null;
+  }
+});
+
 
 
     const leftBtn = document.getElementById('auth-left');
