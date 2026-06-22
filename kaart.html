@@ -1696,8 +1696,250 @@ document.addEventListener('DOMContentLoaded', () => {
 function coordsArrayFix(str) {
   return str;
 }
+// =========================================================================
+// 1. JOONISTAMISE LÕPETAMISE REEGEL (Salvestab kujundid ootele, ei ava midagi)
+// =========================================================================
+window.currentDrawingFeatures = [];
+
+if (typeof drawInteraction !== 'undefined') {
+  drawInteraction.on('drawend', (evt) => {
+    try {
+      const feature = evt.feature;
+      const geometry = feature.getGeometry();
+      const geometryType = geometry.getType(); 
+      
+      // Teisendame koordinaadid OpenLayersi formaadist tavaliseks kaardiformaadiks
+      const clonedGeometry = geometry.clone().transform('EPSG:3857', 'EPSG:4326');
+      const coordsArray = clonedGeometry.getCoordinates();
+
+      console.log("Kujund joonistatud ja lisatud ootele:", geometryType, coordsArray);
+
+      // Paneme andmed globaalsesse massiivi ootama, kuni vajutatakse "Salvesta" nuppu
+      window.currentDrawingFeatures.push({
+        tuup: geometryType,
+        koordinaadid: coordsArray,
+        featureId: feature.ol_uid
+      });
+
+    } catch (err) {
+      console.error("Viga joonistamise töötlemisel:", err);
+    }
+  });
+}
 
 
+// =========================================================================
+// 2. TÖÖRIISTARIBA JA KÜLGRIBA LIUGLEMISE JA LUKUSTAMISE REEGLISTIK
+// =========================================================================
+const sidebarTab = document.getElementById('sidebar-tab'),
+      slidingSidebar = document.getElementById('sliding-sidebar'),
+      sidebarPin = document.getElementById('sidebar-pin'),
+      ribbonTab = document.getElementById('ribbon-tab'),
+      toolRibbon = document.getElementById('tool-ribbon'),
+      ribbonSaveBtn = document.getElementById('ribbon-save'); // Sinu toolbari salvestusnupp
+
+let isSidebarLocked = false, isRibbonLocked = false;
+
+// Funktsioon, mis sulgeb mõlemad paneedid täielikult ja võtab ära piirangud
+function SulgeKoikPaneelid() {
+  isSidebarLocked = false; 
+  isRibbonLocked = false;
+  
+  if (slidingSidebar) slidingSidebar.classList.remove('sidebar-visible');
+  if (toolRibbon) toolRibbon.classList.remove('toolbar-visible');
+  
+  if (sidebarTab) sidebarTab.textContent = '☰';
+  if (sidebarPin) sidebarPin.style.background = '';
+  if (ribbonTab) ribbonTab.style.background = '';
+  
+  // Puhastame igasugused brauseri inert lukud pealehelt
+  const mainEl = document.querySelector('main') || document.body;
+  if (mainEl) {
+    mainEl.removeAttribute('inert');
+    mainEl.removeAttribute('aria-hidden');
+  }
+}
+
+// Külgriba (Sidebar) Hover & Lukustuse loogika
+if (sidebarTab && slidingSidebar) {
+  const toggleSidebar = (show) => {
+    if (show || !isSidebarLocked) {
+      if (show) {
+        slidingSidebar.classList.add('sidebar-visible');
+        sidebarTab.textContent = '✕';
+      } else {
+        slidingSidebar.classList.remove('sidebar-visible');
+        sidebarTab.textContent = '☰';
+      }
+    }
+  };
+  
+  sidebarTab.addEventListener('mouseenter', () => toggleSidebar(true));
+  slidingSidebar.addEventListener('mouseleave', () => toggleSidebar(false));
+  
+  sidebarPin?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isSidebarLocked = !isSidebarLocked;
+    sidebarPin.style.background = isSidebarLocked ? '#a3005a' : ''; // Värvub lukus olekus
+    console.log("Külgriba lukustuse olek:", isSidebarLocked);
+  });
+}
+
+// Tööriistariba (Tool-Ribbon) Hover & Lukustuse loogika
+if (ribbonTab && toolRibbon) {
+  const toggleRibbon = (show) => {
+    if (show || !isRibbonLocked) {
+      if (show) {
+        toolRibbon.classList.add('toolbar-visible');
+      } else {
+        toolRibbon.classList.remove('toolbar-visible');
+      }
+    }
+  };
+
+  ribbonTab.addEventListener('mouseenter', () => toggleRibbon(true));
+  toolRibbon.addEventListener('mouseleave', () => toggleRibbon(false));
+  
+  // Nupu klikk stoperdab/lukustab tööriistariba paigale
+  ribbonTab.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isRibbonLocked = !isRibbonLocked;
+    ribbonTab.style.background = isRibbonLocked ? '#a3005a' : ''; // Värvub lukus olekus
+    console.log("Tööriistariba lukustuse olek:", isRibbonLocked);
+  });
+}
+
+
+// =========================================================================
+// 3. TÖÖRIISTARIBA "SALVESTA" NUPU VAJUTAMINE JA SUPABASE PÄRING
+// =========================================================================
+const scienceModal = document.getElementById('science-modal');
+const saveScienceBtn = document.getElementById('save-science-btn'); // Modali sees olev kinnitusnupp
+const cancelScienceBtn = document.getElementById('cancel-science-btn'); // Modali tühistusnupp
+
+// Kui vajutatakse Ribboni pealt "Salvesta"
+if (ribbonSaveBtn) {
+  ribbonSaveBtn.addEventListener('click', () => {
+    if (!window.currentDrawingFeatures || window.currentDrawingFeatures.length === 0) {
+      alert("Kaardil pole ühtegi uut joonistatud kujundit, mida salvestada!");
+      return;
+    }
+
+    // Kontrollime rolli: Kas oleme sisse logitud Spetsialist?
+    if (window.frontendUser) {
+      if (scienceModal) {
+        // Sulgeme taustapaneelid automaatselt, et ekraan oleks puhas
+        SulgeKoikPaneelid(); 
+        
+        // Avame teadusandmete akna
+        scienceModal.style.display = 'block';
+        scienceModal.removeAttribute('inert');
+        
+        // Võtame viimase joonistatud kujundi andmed modali ootelehele
+        const viimaneKujund = window.currentDrawingFeatures[window.currentDrawingFeatures.length - 1];
+        scienceModal.dataset.tempCoords = JSON.stringify(viimaneKujund.koordinaadid);
+        scienceModal.dataset.tempType = viimaneKujund.tuup;
+      }
+    } else {
+      // Tavaline uudistaja -> Salvestame LocalStorage'isse ilma modalita
+      const localFeatures = JSON.parse(localStorage.getItem('kuldkingake_local_features') || '[]');
+      window.currentDrawingFeatures.forEach(f => {
+        localFeatures.push({
+          id: crypto.randomUUID(),
+          tuup: f.tuup,
+          koordinaadid: f.koordinaadid,
+          created_at: new Date().toISOString()
+        });
+      });
+      localStorage.setItem('kuldkingake_local_features', JSON.stringify(localFeatures));
+      alert("Andmed edukalt salvestatud Sinu brauseri mällu (LocalStorage)!");
+      window.currentDrawingFeatures = []; // Puhastame ootelehe
+    }
+  });
+}
+
+// Modali KATKESTA nupp
+if (cancelScienceBtn) {
+  cancelScienceBtn.addEventListener('click', () => {
+    if (scienceModal) {
+      scienceModal.style.display = 'none';
+      scienceModal.setAttribute('inert', '');
+      delete scienceModal.dataset.tempCoords;
+      delete scienceModal.dataset.tempType;
+    }
+    window.currentDrawingFeatures = []; // Puhastame ootel kujundi
+  });
+}
+
+// Modali KINNITA PILVE SALVESTUS nupp
+if (saveScienceBtn) {
+  saveScienceBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    
+    if (!scienceModal) return;
+    const rawCoords = scienceModal.dataset.tempCoords;
+    const tuup = scienceModal.dataset.tempType;
+
+    if (!rawCoords || !tuup) {
+      alert("Viga: Kujundi andmed kadusid enne pilve jõudmist.");
+      return;
+    }
+
+    try {
+      const koordinaadid = JSON.parse(rawCoords);
+      const { data: { session } } = await window.supabase.auth.getSession();
+      
+      if (!session || !session.user) {
+        alert("Sessioon puudub või on aegunud. Palun logi uuesti sisse.");
+        return;
+      }
+
+      // Kogume andmed vormi väljadelt
+      const pealkiriVal = document.getElementById('science-title')?.value || "Uus vaatlusala";
+      const liikVal = document.getElementById('science-species')?.value || "Määramata";
+      const kogusVal = document.getElementById('science-amount')?.value || "1";
+      const ohustatusVal = document.getElementById('science-danger')?.value || "Madal";
+      const kvaliteetVal = document.getElementById('science-quality')?.value || "Keskpärane";
+      const nahtavusVal = document.getElementById('science-visibility')?.value || "privaatne";
+      const notedVal = document.getElementById('science-notes')?.value || "";
+
+      // Teeme reaalse päringu Supabasesse
+      const { data, error } = await window.supabase
+        .from('vaatlus_objektid')
+        .insert({
+          looja_id: session.user.id,
+          kasutajanimi: session.user.email,
+          pealkiri: pealkiriVal,
+          tuup: tuup,
+          koordinaadid: koordinaadid,
+          liik: liikVal,
+          kogus: kogusVal,
+          kvaliteet: kvaliteetVal,
+          ohustatus: ohustatusVal,
+          nahtavus: nahtavusVal,
+          noted: notedVal,
+          staatus: 'ootel'
+        })
+        .select();
+
+      if (error) throw error;
+
+      alert("Vaatlusandmed on edukalt salvestatud Supabase andmebaasi!");
+      
+      // Sulgeme akna ja puhastame mälu
+      scienceModal.style.display = 'none';
+      scienceModal.setAttribute('inert', '');
+      delete scienceModal.dataset.tempCoords;
+      delete scienceModal.dataset.tempType;
+      window.currentDrawingFeatures = [];
+
+    } catch (err) {
+      console.error("Kriitiline viga Supabase salvestamisel:", err);
+      alert("Salvestamine ebaõnnestus: " + err.message);
+    }
+  });
+}
+    
   </script>
   <!-- TEADUSANDMETE TÄITMISE MODAL SPETSIALISTILE -->
 <div id="science-modal" class="modal-backdrop" style="display:none; z-index:100005;">
