@@ -476,22 +476,15 @@
 
       
 // GLOBAALNE HOIDLA: Siia kogume joonistatud kujundid enne Toolbarist "Salvesta" vajutamist
+// PUHAS JOONISTAMISE LÕPETAMINE: Salvestab kujundi ainult mälu-massiivi ootele
 window.currentDrawingFeatures = [];
 
 drawInteraction.on('drawend', (evt) => {
-  const feature = evt.feature;
-  const geometry = feature.getGeometry();
-  const geometryType = geometry.getType();
-  const clonedGeometry = geometry.clone().transform('EPSG:3857', 'EPSG:4326');
-  const coordsArray = clonedGeometry.getCoordinates();
-
-  window.currentDrawingFeatures.push({
-    tuup: geometryType,
-    koordinaadid: coordsArray,
-    featureId: feature.ol_uid
-  });
-  console.log("Kujund joonistatud ja lisatud ootele.");
+  // Võtame joonistatud kujundi ja paneme massiivi ootama, kuni vajutatakse Toolbari nuppu
+  window.currentDrawingFeatures.push(evt.feature);
+  console.log("Kujund joonistatud ja lisatud ootele. Ootab Toolbarist Salvesta klikki.");
 });
+
 
 
 
