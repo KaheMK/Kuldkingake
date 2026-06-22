@@ -1815,6 +1815,7 @@ const saveScienceBtn = document.getElementById('save-science-btn'); // Modali se
 const cancelScienceBtn = document.getElementById('cancel-science-btn'); // Modali tühistusnupp
 
 // Kui vajutatakse Ribboni pealt "Salvesta"
+// TÖÖRIISTARIBA "SALVESTA" NUPU VAJUTAMINE
 if (ribbonSaveBtn) {
   ribbonSaveBtn.addEventListener('click', () => {
     if (!window.currentDrawingFeatures || window.currentDrawingFeatures.length === 0) {
@@ -1822,23 +1823,41 @@ if (ribbonSaveBtn) {
       return;
     }
 
-    // Kontrollime rolli: Kas oleme sisse logitud Spetsialist?
+    // 1. Eemaldame pliiatsi kaardilt (Lõpetame joonistamise fookuse, et pliiats kaoks!)
+    if (typeof map !== 'undefined' && typeof drawInteraction !== 'undefined') {
+      map.removeInteraction(drawInteraction);
+      console.log("Joonistamise režiim deaktiveeritud, pliiats eemaldatud.");
+    }
+
+    // 2. Sulgeme Toolbarid ja Sidebarid automaatselt
+    SulgeKoikPaneelid(); 
+
+    // 3. Avame Teadusandmete akna (Spetsialisti modal)
     if (window.frontendUser) {
       if (scienceModal) {
-        // Sulgeme taustapaneelid automaatselt, et ekraan oleks puhas
-        SulgeKoikPaneelid(); 
-        
-        // Avame teadusandmete akna
         scienceModal.style.display = 'block';
         scienceModal.removeAttribute('inert');
+        scienceModal.removeAttribute('aria-hidden');
         
-        // Võtame viimase joonistatud kujundi andmed modali ootelehele
+        // Tagame, et pealeht ei lukusta klikke
+        const mainEl = document.querySelector('main') || document.body;
+        if (mainEl) {
+          mainEl.removeAttribute('inert');
+          mainEl.removeAttribute('aria-hidden');
+        }
+
+        // Paneme andmed valmis
         const viimaneKujund = window.currentDrawingFeatures[window.currentDrawingFeatures.length - 1];
         scienceModal.dataset.tempCoords = JSON.stringify(viimaneKujund.koordinaadid);
         scienceModal.dataset.tempType = viimaneKujund.tuup;
+        
+        // Viime fookuse sisendväljale, et brauser ei hanguks
+        setTimeout(() => {
+          document.getElementById('science-title')?.focus();
+        }, 50);
       }
     } else {
-      // Tavaline uudistaja -> Salvestame LocalStorage'isse ilma modalita
+      // Uudistaja haru salvestab otse LocalStorage'isse
       const localFeatures = JSON.parse(localStorage.getItem('kuldkingake_local_features') || '[]');
       window.currentDrawingFeatures.forEach(f => {
         localFeatures.push({
@@ -1849,11 +1868,12 @@ if (ribbonSaveBtn) {
         });
       });
       localStorage.setItem('kuldkingake_local_features', JSON.stringify(localFeatures));
-      alert("Andmed edukalt salvestatud Sinu brauseri mällu (LocalStorage)!");
-      window.currentDrawingFeatures = []; // Puhastame ootelehe
+      alert("Vaatlus salvestatud kohalikku brauserisse (LocalStorage)!");
+      window.currentDrawingFeatures = [];
     }
   });
 }
+
 
 // Modali KATKESTA nupp
 if (cancelScienceBtn) {
