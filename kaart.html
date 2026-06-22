@@ -319,6 +319,7 @@
         </p>
       </div>
     <!-- LISAME SIIN Logi sisse nupu (pane see täpselt siia) -->
+      <button id="login-badge" class="login-badge">🔒 Logi sisse spetsialistina</button>
   
 
     </div>
@@ -1551,6 +1552,27 @@ window.avatäpsustatudObjektiModal = async function(objekt, sisseLogitudKasutaja
 };
 
   </script>
+  <!-- TEADUSANDMETE TÄITMISE MODAL SPETSIALISTILE -->
+<div id="science-modal" class="modal-backdrop" style="display:none; z-index:100005;">
+  <!-- Sisu: Pealkiri, liigi valik (select), kogus, kvaliteet, ohustatus, nähtavus, märkused -->
+  <div class="modal-card">
+    <button class="modal-close" onclick="document.getElementById('science-modal').style.display='none';">✕</button>
+    <h2>Spetsialisti vaatlusandmed</h2>
+    <!-- Vormiväljad id-dega: science-title, science-species, science-amount, science-quality, science-danger, science-visibility, science-notes -->
+    <button id="save-science-btn" style="background: linear-gradient(180deg,#ff4da6,#c2185b); color: white; padding: 10px; border-radius: 6px;">Salvesta andmebaasi</button>
+  </div>
+</div>
+
+<!-- SISSILOGIMISE MODAL (Magic Link) -->
+<div id="login-modal" class="modal-backdrop" style="display:none; z-index:100010;">
+  <div class="modal-card" style="max-width: 400px;">
+    <button class="modal-close" id="login-close">✕</button>
+    <h2>Sisselogimine portaali</h2>
+    <input type="email" id="login-email" placeholder="Sinu e-posti aadress" style="width:100%; padding:10px;">
+    <button id="send-login-btn" style="background: #a3005a; color: white;">Saada sisselogimise link</button>
+  </div>
+</div>
+
 </body>
 </html>
 
