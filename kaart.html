@@ -401,7 +401,7 @@
         document.head.appendChild(s2);
       };
       document.head.appendChild(s);
-    })(initApp);
+    })();
 
     function initApp(){
       // set mobile vh var
@@ -493,11 +493,52 @@
         map.addInteraction(snapInteraction);
 
       
-        drawInteraction.on('drawend', async (evt) => {
-  // ... (vt originaalkoodi salvestusloogika kontrollimiseks)
-  // KONTROLLIME SISSILOGITUST LÄBI SUPABASE
-  // ... (vt täielikku loogikat koodi uuendamiseks)
+  drawInteraction.on('drawend', async (evt) => {
+  const feature = evt.feature;
+  const geometry = feature.getGeometry();
+  
+  // 1. Tuvastame tüübi (Point, LineString, Polygon)
+  const geometryType = geometry.getType(); 
+  
+  // 2. Võtame koordinaadid (teisendame need kaardi projektorist tavalisse EPSG:4326 / WGS84 formaati, et salvestada)
+  const clonedGeometry = geometry.clone().transform('EPSG:3857', 'EPSG:4326');
+  const coordsArray = clonedGeometry.getCoordinates();
+
+  console.log("Joonistatud tüüp:", geometryType);
+  console.log("Koordinaatide massiiv:", coordsArray);
+
+  // KONTROLLIME, KAS KASUTAJA ON SISSE LOGITUD (Spetsialist)
+  // Märkus: kontrolli, et frontendUser või currentUser muutuja on sul kättesaadav
+  if (typeof frontendUser !== 'undefined' && frontendUser) {
+    
+    // Kasutaja on sisse loginud -> Avame Teadusandmete akna (Modal)
+    const modal = document.getElementById('science-modal');
+    if (modal) {
+      modal.style.display = 'block';
+      
+      // Salvestame ajutiselt joonistatud objekti info vormi külge, et salvestamise nupule vajutades kätte saada
+      modal.dataset.tempCoords = JSON.stringify(coordsArray);
+      modal.dataset.tempType = geometryType;
+      modal.dataset.featureId = feature.ol_uid; // Hoiame viidet kaardi objektile
+    }
+
+  } else {
+    // KASUTAJA POLE SISSE LOGINUD (Uudistaja) -> Salvestame LocalStorage'isse
+    console.log("Uudistaja režiim: Salvestame LocalStorage'isse");
+    
+    const localFeatures = JSON.parse(localStorage.getItem('kuldkingake_local_features') || '[]');
+    localFeatures.push({
+      id: crypto.randomUUID(),
+      tuup: geometryType,
+      koordinaadid: coordsArray,
+      created_at: new Date().toISOString()
+    });
+    localStorage.setItem('kuldkingake_local_features', JSON.stringify(localFeatures));
+    
+    alert("Objekt salvestatud Sinu brauseri mällu (LocalStorage). Püsivaks salvestamiseks logi sisse!");
+  }
 });
+
 
       }
 
@@ -891,6 +932,67 @@ document.getElementById('ribbon-clear')?.addEventListener('click', function() {
       // Eemaldame lehe laadija ekraanilt, kuna kaart sai edukalt valmis
       const loader = document.getElementById('page-loader');
       if (loader) loader.style.display = 'none';
+      // Kuulame Teadusandmete akna vormi esitamist / salvestamise nuppu
+const saveScienceBtn = document.getElementById('save-science-btn'); // Veendu, et su HTML-is on sellel nupul õige ID
+if (saveScienceBtn) {
+  saveScienceBtn.addEventListener('click', async () => {
+    const modal = document.getElementById('science-modal');
+    
+    // Võtame joonistajalt kaasa pandud geomeetria andmed
+    const koordinaadid = JSON.parse(modal.dataset.tempCoords || '[]');
+    const tuup = modal.dataset.tempType;
+    
+    if (!koordinaadid || !tuup) {
+      alert("Viga: Kujundi andmed puuduvad!");
+      return;
+    }
+
+    // Kogume vormilt sisestatud väärtused (kontrolli oma HTML input/select ID-sid)
+    const pealkiriInput = document.getElementById('science-title')?.value || "Vaatlusobjekt";
+    const liikSelect = document.getElementById('science-species')?.value || "";
+    const kogusInput = document.getElementById('science-amount')?.value || "";
+    const ohustatusSelect = document.getElementById('science-danger')?.value || "";
+    const kvaliteetSelect = document.getElementById('science-quality')?.value || "";
+    const nahtavusSelect = document.getElementById('science-visibility')?.value || "privaatne";
+    const notedText = document.getElementById('science-notes')?.value || "";
+
+    try {
+      // Saadame andmed Supabase tabelisse 'vaatlus_objektid'
+      // Kasutame aknas kättesaadavat supabase klienti ja sisseloginud kasutajat
+      const { data, error } = await window.supabase
+        .from('vaatlus_objektid')
+        .insert({
+          looja_id: frontendUser.id,           // Sisselogitud kasutaja UUID
+          kasutajanimi: frontendUser.email,    // Kasutame meili või kasutajanime profiilist
+          pealkiri: pealkiriInput,
+          tuup: tuup,                          // 'Point', 'LineString' või 'Polygon'
+          koordinaadid: koordinaadid,          // Massiiv salvestatakse jsonb-na
+          liik: liikSelect,
+          kogus: kogusInput,
+          kvaliteet: kvaliteetSelect,
+          ohustatus: ohustatusSelect,
+          nahtavus: nahtavusSelect,
+          noted: notedText,
+          staatus: 'ootel'                     // Default staatus uuele vaatlusele
+        })
+        .select();
+
+      if (error) throw error;
+
+      alert("Andmed edukalt Supabase andmebaasi salvestatud!");
+      
+      // Sulgeme akna ja puhastame andmed
+      modal.style.display = 'none';
+      delete modal.dataset.tempCoords;
+      delete modal.dataset.tempType;
+      
+    } catch (err) {
+      console.error("Viga Supabase salvestamisel:", err);
+      alert("Andmebaasi salvestamine ebaõnnestus: " + err.message);
+    }
+  });
+}
+
 
     } // end initApp
   </script>
