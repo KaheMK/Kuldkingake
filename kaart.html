@@ -148,48 +148,29 @@
       background: linear-gradient(180deg,#ff4da6,#c2185b);
       border-radius: 6px 0 0 6px;
     }
-    #sidebar-pin {
-      position: absolute;
-      left: -48px;
-      top: 290px;
-      background: #ff4da6;
-      color: #fff;
-      border-radius: 6px;
-      padding: 6px;
-      border: none;
-      cursor: pointer;
-      box-shadow: 0 6px 12px rgba(0,0,0,0.12);
-    }
+   /* TÖÖRIISTARIBA (RIBBON) & KÜLGRIBA LIUGLEMINE (Sarnane hover-loogika) */
+#tool-ribbon, #sliding-sidebar {
+  transition: right 300ms cubic-bezier(.2,.9,.3, 1), opacity 200ms ease;
+  display: flex !important; /* display: none asemel */
+}
 
-    /* Ribbon */
-    #ribbon-tab {
-      position: fixed;
-      right: 12px;
-      top: 12px;
-      background: #ff4da6;
-      color: #fff;
-      padding: 8px;
-      border-radius: 8px;
-      z-index: 2450;
-      cursor: pointer;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-    }
-    #tool-ribbon {
-      position: fixed;
-      right: 12px;
-      top: 56px;
-      display:flex;
-      flex-direction: column;
-      gap:8px;
-      z-index: 2440;
-      transition: transform 260ms ease, opacity 200ms ease;
-    }
-    #tool-ribbon.hidden { transform: translateX(8px) scale(0.98); opacity: 0; pointer-events:none; }
-    .rbtn { background:#fff; border:1px solid #eee; padding:8px 10px; border-radius:8px; cursor:pointer; min-width:110px; font-weight:600; color:#333; }
-    .rbtn.active { background:linear-gradient(180deg,#ff4da6,#c2185b); color:#fff; }
-   
-    /* Small helper for legacy sidebar (kept hidden visually) */
-    .sidebar { display:none; }
+#tool-ribbon {
+  right: -150px; /* Peidus */
+  opacity: 0;
+  pointer-events: none;
+}
+#tool-ribbon.toolbar-visible {
+  right: 12px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#sliding-sidebar {
+  right: -320px; /* Peidus */
+}
+#sliding-sidebar.sidebar-visible {
+  right: 0;
+}
 
     /* Page loader (full screen) */
     #page-loader {
