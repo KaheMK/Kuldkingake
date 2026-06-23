@@ -5,7 +5,11 @@ html,body{height:100%;margin:0;padding:0;font-family:system-ui,-apple-system,"Se
 #map-branding{position:absolute;left:20px;top:12px;display:flex;align-items:center;gap:10px;z-index:2400;pointer-events:none}
 #orchid-logo-svg{width:48px;height:48px;pointer-events:auto}
 #map-title{font-weight:800;color:#a3005a;font-size:16px;background:rgba(255,255,255,0.85);padding:4px 8px;border-radius:6px}
-#auth-pill{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:2410}
+.auth-pill {
+  position: absolute; top: 1px; left: 50%; transform: translateX(-50%);
+  z-index: 2410; display: flex; border-radius: 8px; overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15); background: #fff;
+}
 #map-source{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:2400;background:rgba(255,255,255,0.9);padding:6px 10px;border-radius:6px;font-size:12px}
 #sidebar-tab{position:fixed;right:0;top:40%;transform:translateY(-50%);background:#ff4da6;color:#fff;padding:10px 12px;border-radius:8px 0 0 8px;z-index:2460;cursor:pointer}
 #sliding-sidebar{position:fixed;right:-320px;top:0;width:320px;height:100dvh;background:#fff;box-shadow:-8px 0 24px rgba(0,0,0,0.12);transition:right 320ms cubic-bezier(.2,.9,.3,1);z-index:2430}
