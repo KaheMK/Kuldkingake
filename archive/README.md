@@ -1,5 +1,4 @@
-# Archived files
+# THIS FOLDER CONTAINS ARCHIVED FILES
 
-This directory contains archived files moved from the main skeleton to avoid duplication and clutter.
-
-Files are preserved here for history and reference. Do not edit these files in-place; use the refactor/skeleton-modularize branch if you need to restore them.
+The original files moved here were part of the older skeleton and are preserved for reference.
+Do not edit files here directly. To restore a file, copy it back into the top-level `js/` folder from this archive.
