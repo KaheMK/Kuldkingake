@@ -771,6 +771,13 @@ map.on('singleclick', (evt) => {
 window.initKaartApp = initKaartApp;
 
 // Sündmuse kuulaja fallbackiks, kui failid laevad teises rütmis
+// js/kaart-app.js — MINE FAILI KÕIGE LÕPPU JA ASENDA VIIMASED READ SELLEGA:
+
+// LÕPLIK PARANDUS: Seome funktsiooni otseselt ja koheselt akna külge,
+// et HTML-i lõpus olev dirigent saaks selle ilma vigadeta sekundipealt käivitada!
+window.initKaartApp = initKaartApp;
+
+// Sündmuse kuulaja fallbackiks, kui failid peaksid laadima ootamatus rütmis
 if (window.mapObjects) {
   initKaartApp();
 } else {
@@ -780,3 +787,4 @@ if (window.mapObjects) {
 }
 
 })(window);
+
