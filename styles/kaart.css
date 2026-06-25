@@ -70,5 +70,65 @@ html, body {
 .login-badge{background:#fff;border:1px solid #ddd;padding:6px 10px;border-radius:6px;cursor:pointer}
 .sidebar-edge{position:absolute;left:-12px;top:0;bottom:0;width:12px;background:linear-gradient(180deg,#ff4da6,#c2185b);border-radius:6px 0 0 6px}
 #__flash_msg{position:fixed;left:12px;bottom:12px;padding:8px 12px;background:rgba(0,0,0,0.7);color:#fff;border-radius:6px;z-index:100000}
+/* styles/kaart.css — LÕPULIK MOBIILIEKRAANI OPTIMEERIMINE */
+
+@media (max-width: 768px) {
+  /* 1. Muudame logo ja pealkirja mobiilis ülipisikeseks ja kompaktseks */
+  #map-branding {
+    top: 6px;
+    left: 10px;
+    gap: 6px;
+    max-width: 60%;
+  }
+  #orchid-logo-svg {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  #map-title {
+    font-size: 13px !important;
+    line-height: 1.2;
+  }
+
+  /* 2. Muudame sisselogimise pilli pisemaks ja nihutame selle nurgast natuke eemale */
+  #auth-pill {
+    top: 6px;
+    right: 10px;
+    transform: scale(0.85); /* Muudab nupud 15% väiksemaks */
+    transform-origin: top right;
+  }
+
+  /* 3. KULDREEGEL: Kui tööriistariba (tool-ribbon) EI OLE peidetud, 
+     siis peidame sisselogimise ja logo automaatselt EEST ÄRA! */
+  #tool-ribbon:not(.hidden) ~ #auth-pill,
+  #tool-ribbon:not(.hidden) ~ #map-branding {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  /* 4. Samamoodi, kui külgriba on lahti, peidame logod, et nad teksti peale ei roniks */
+  #sliding-sidebar.open ~ #auth-pill,
+  #sliding-sidebar.open ~ #map-branding {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* 5. Tööriistariba nupud mobiilis ritta, et näpp ja stylus tabaks paremini */
+  #tool-ribbon {
+    left: 5px;
+    right: 5px;
+    width: auto !important;
+    padding: 6px;
+    gap: 4px;
+    justify-content: space-between;
+  }
+  
+  .rbtn {
+    padding: 8px 6px !important;
+    font-size: 12px !important;
+    flex: 1; /* Nupud jagunevad võrdselt ära */
+    text-align: center;
+  }
+}
 
 
