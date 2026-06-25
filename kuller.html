@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="et">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Kaart — Orhideed</title>
+  <!-- Favicon (inline SVG) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 120 120%22>g fill=%22%23a3005a%22><circle cx=%2260%22 cy=%2260%22 r=%2240%22/></g></svg>" type="image/svg+xml" />
+  <!-- OpenLayers CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v7.4.0/ol.css" />
+  <!-- selgitus: kasutame harus oleva styles/kaart.css, mis koondab vajalikud stiilid -->
+  <link rel="stylesheet" href="styles/kaart.css" />
+  <style>
+    /* selgitus: refaktori versioonis väldime suurt inline CSS-i; vajalikud reeglid on styles/kaart.css-s */
+  </style>
+</head>
+<body>
+  <!-- Fullscreen loader -->
+  <div id="page-loader" aria-hidden="false"><div class="inner">Laadin kaarti…</div></div>
+  <!-- Topbar kept in DOM but hidden via CSS for accessibility -->
+  <header class="topbar" aria-hidden="true">
+  </header>
+  <main class="main-area" role="main">
+    <!-- Kaardialune konteiner; OVERLAY'id on selle sees, et absolute positsioon toimiks kaardiga -->
+    <div id="map" tabindex="0" role="application" aria-label="Kaart">
+      <!-- Siia renderdab OpenLayers (ol.Map target='map') -->
+      <!-- Branding: inline SVG logo + title (overlay on map) -->
+      <div id="map-branding" aria-hidden="false">
+        <svg id="orchid-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="48" height="48" tabindex="0" role="img" aria-label="Orhidee logo">
+          <title>Orhidee</title>
+          <g fill="none" stroke="#a3005a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M60 18c6 0 12 4 14 9 2 5 1 10-2 14-3 4-8 6-12 6s-9-2-12-6c-3-4-4-9-2-14 2-5 8-9 14-9z"/>
+            <path d="M60 36c8 0 16 6 20 12 4 6 4 14 0 20-4 6-12 10-20 10s-16-4-20-10c-4-6-4-14 0-20 4-6 12-12 20-12z"/>
+            <path d="M36 44c6-2 12 0 16 4" />
+            <path d="M84 44c-6-2-12 0-16 4" />
+            <path d="M60 56c4 0 8 3 8 6s-4 6-8 6-8-3-8-6 4-6 8-6z"/>
+            <path d="M60 70v12" />
+            <path d="M52 30c-6 6-10 14-10 22" />
+            <path d="M68 30c6 6 10 14 10 22" />
+          </g>
+        </svg>
+        <div id="map-title">Orhideeliste kasvualad — Palivere</div>
+      </div>
+      <!-- KASUTAJA AUTH PILL (Supabase seisundite kuvamiseks) -->
+      <div id="auth-pill" class="auth-pill" role="region" aria-label="Kasutaja juhtimine">
+        <button id="auth-left" class="auth-part left" title="Uudistaja">Uudistaja</button>
+        <button id="auth-right" class="auth-part right" aria-haspopup="dialog" aria-controls="login-modal">Logi sisse</button>
+      </div>
+      <!-- Data source overlay on map bottom -->
+      <div id="map-source">Andmeallikas: Maa‑ ja Ruumiamet. Kasutamine CC‑BY 4.0 nõuete kohaselt.</div>
+      <!-- Sliding sidebar tab and container (map overlays) -->
+      <div id="sidebar-tab" title="Ava külgriba" role="button" tabindex="0">☰</div>
+      <aside id="sliding-sidebar" class="closed" aria-hidden="true">
+        <div class="sidebar-edge" aria-hidden="true"></div>
+        <button id="sidebar-pin" aria-pressed="false" title="Kinnita">📌</button>
+        <div class="sidebar-content" id="sliding-sidebar-content">
+          <!-- layer-switcher placeholder -->
+          <!-- kuller.html — Otsi üles layer-switcher ja muuda keskmist rida: -->
+<div id="layer-switcher" class="layer-switcher" aria-label="Kihtide valik">
+  <h3>Kihtide valik</h3>
+  <label class="ls-row"><input type="checkbox" id="ls-osm" checked> <span>Baaskaart (OSM)</span></label>
+  <label class="ls-row"><input type="checkbox" id="ls-cad"> <span>Hübriidkaart (Aerofoto)</span></label> <!-- MUUDETUD: Tekst viitab nüüd hübriidile -->
+  <label class="ls-row"><input type="checkbox" id="ls-draw" checked> <span>Joonistused</span></label>
+</div>
+
+        </div>
+      </aside>
+      <!-- Ribbon tab and tool buttons (map overlay) -->
+      <div id="ribbon-tab" title="Tööriistad" role="button" tabindex="0">✦</div>
+      <nav id="tool-ribbon" class="hidden" aria-hidden="true">
+        <button id="ribbon-draw" class="rbtn">Joonista</button>
+        <button id="ribbon-modify" class="rbtn">Muuda</button>
+        <button id="ribbon-back" class="rbtn">Tagasi</button>
+        <button id="ribbon-save" class="rbtn">Salvesta</button>
+        <button id="ribbon-load" class="rbtn">Laadi</button>
+        <button id="ribbon-export" class="rbtn">Ekspordi</button>
+        <button id="ribbon-clear" class="rbtn">Kustuta</button>
+      </nav>
+    </div> <!-- end #map -->
+  </main>
+  <!-- Admin modal ja Login modal peavad olema BODY otsesed lapsed (et neid ei peetaks inert main sees) -->
+  <div id="admin-modal" class="modal-backdrop" aria-hidden="true" style="display:none;z-index:100000">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="admin-title">
+      <button class="modal-close" id="admin-close" aria-label="Sulge administraatori info">✕</button>
+      <h2 id="admin-title">Administraatori info</h2>
+      <div style="display:flex;gap:12px;align-items:center">
+        <div id="modal-branding" aria-hidden="false" style="display:flex;gap:12px;align-items:center">
+          <svg id="orchid-logo-svg" width="48" height="48" viewBox="0 0 120 120" xmlns="http://w3.org" role="img" aria-label="Orhidee logo" tabindex="0" style="width:48px;height:48px;border-radius:6px;display:block">
+            <title>Orhidee</title>
+            <g fill="none" stroke="#a3005a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M60 18c6 0 12 4 14 9 2 5 1 10-2 14-3 4-8 6-12 6s-9-2-12-6c-3-4-4-9-2-14 2-5 8-9 14-9z"/>
+              <path d="M60 36c8 0 16 6 20 12 4 6 4 14 0 20-4 6-12 10-20 10s-16-4-20-10c-4-6-4-14 0-20 4-6 12-12 20-12z"/>
+              <path d="M36 44c6-2 12 0 16 4"/>
+              <path d="M84 44c-6-2-12 0-16 4"/>
+              <path d="M60 56c4 0 8 3 8 6s-4 6-8 6-8-3-8-6 4-6 8-6z"/>
+              <path d="M60 70v12"/>
+              <path d="M52 30c-6 6-10 14-10 22"/>
+              <path d="M68 30c6 6 10 14 10 22"/>
+            </g>
+          </svg>
+        </div>
+        <div>
+          <strong>Orhideeliste kasvualad — Palivere</strong>
+          <p style="margin:6px 0 0 0;font-size:20px;color:#180129">Nutikas abiline maastiku jälgimisel. Küsimused postkasti, mis on kohe all.</p>
+          <p style="margin:8px 0 0 0"><a href="mailto:info@kahem.info" id="admin-mail" style="color:#f60b0b;font-weight:700;text-decoration:none">Saada e‑post: info@kahem.info</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="login-modal" class="modal-backdrop" style="display:none">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
+      <button id="login-close" class="modal-close" aria-label="Sulge">✕</button>
+      <h3 id="login-title" style="margin-top:0; color:#a3005a;">Logi sisse e‑postiga</h3>
+      <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
+        <input id="login-email" type="email" placeholder="Sinu e‑post" style="padding:8px; border:1px solid #ccc; border-radius:6px; width:100%; box-sizing:border-box;" />
+        <button id="login-send" type="button" style="background:#a3005a; color:#fff; border:none; padding:10px; border-radius:6px; font-weight:700; cursor:pointer;">Saada Magic Link</button>
+      </div>
+      <p id="login-msg" style="color:#666; font-size:13px; margin-top:8px; min-height:18px;"></p>
+      <div style="margin-top:8px"><button id="logout-btn" style="display:none" type="button">Logi välja</button></div>
+    </div>
+  </div>
+    <!-- TEADUSANDMETE TÄITMISE MODAL SPETSIALISTILE -->
+<!-- TEADUSANDMETE SPETSIALISTI HÜPIK (SCIENCE MODAL) -->
+<div id="science-modal" class="modal-backdrop" style="display:none; z-index:100001;">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="science-title">
+    <h3 id="science-title" style="margin-top:0; color:#a3005a;">Vaatlusobjekti teadusandmed</h3>
+    <p style="font-size:13px; color:#666;">Täida lisaväljad Palivere orhideeliste andmebaasi jaoks.</p>
+    
+    <!-- index.html — Asenda teadusmodalist liigi rida selle dünaamilise lahendusega: -->
+<label><strong>Kategooria:</strong><br>
+  <select id="sci-kategooria" style="padding:8px; width:100%; border:1px solid #ccc; border-radius:6px; margin-bottom: 8px;">
+    <option value="orhidee" selected>Orhideelised (Vali nimekirjast)</option>
+    <option value="muu">Muu vaatlus (Kirjuta ise)</option>
+  </select>
+</label>
+
+<label id="sci-liik-list-wrapper"><strong>Orhidee liik Eestis:</strong><br>
+  <select id="sci-liik-select" style="padding:8px; width:100%; border:1px solid #ccc; border-radius:6px;">
+    <option value="Kaunis kuldking">Kaunis kuldking (Cypripedium calceolus)</option>
+    <option value="Hall käpp">Hall käpp (Orchis militaris)</option>
+    <option value="Kärbesõis">Kärbesõis (Ophrys insectifera)</option>
+    <option value="Balti sõrmkäpp">Balti sõrmkäpp (Dactylorhiza baltica)</option>
+    <option value="Ööviiul">Ööviiul / Kahelehine käokeel (Platanthera bifolia)</option>
+    <option value="Suur käopõll">Suur käopõll (Neottia ovata)</option>
+    <option value="Maasapp">Harilik maasapp (Centaurium erythraea)</option>
+  </select>
+</label>
+
+<label id="sci-liik-vaba-wrapper" style="display:none;"><strong>Muu vaatluse nimetus:</strong><br>
+  <input id="sci-liik-vaba" type="text" placeholder="nt. Haruldane sammal, Pesapaik" style="padding:8px; width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:6px;" />
+</label>
+
+      
+      <label><strong>Levik / kogus:</strong><br>
+        <input id="sci-kogus" type="text" placeholder="nt. 5 üksikut taime, tihe rühm" style="padding:8px; width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:6px;" />
+      </label>
+      
+      <label><strong>Ohustatus maastikul:</strong><br>
+        <select id="sci-ohustatus" style="padding:8px; width:100%; border:1px solid #ccc; border-radius:6px;">
+          <option value="madal">Madal oht</option>
+          <option value="keskmine">Keskmine (tallamisoht, võsastumine)</option>
+          <option value="kõrge">Kõrge (ehitustegevus, kuivendamine)</option>
+        </select>
+      </label>
+      
+      <label><strong>Andmete nähtavus kaardil:</strong><br>
+        <select id="sci-nahtavus" style="padding:8px; width:100%; border:1px solid #ccc; border-radius:6px;">
+          <option value="avalik">Avalik (kõik näevad)</option>
+          <option value="piiratud">Piiratud (ainult spetsialistid ja admin)</option>
+        </select>
+      </label>
+      
+      <div style="display:flex; gap:10px; margin-top:8px; justify-content:flex-end;">
+        <button id="sci-cancel-btn" type="button" style="padding:8px 16px; background:#ccc; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Tühista</button>
+        <button id="sci-save-btn" type="button" style="padding:8px 16px; background:#a3005a; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Salvesta pilve</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- KOHALIKU SALVESTAMISE HÜPIK (LOCAL MODAL) -->
+<div id="local-save-modal" class="modal-backdrop" style="display:none; z-index:100002;">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="local-title">
+    <h3 id="local-title" style="margin-top:0; color:#a3005a;">Salvesta joonis seadmesse</h3>
+    <p style="font-size:13px; color:#666;">Andmed salvestatakse ainult selle brauseri mällu (LocalStorage).</p>
+    
+    <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
+      <label><strong>Objekti pealkiri / nimi:</strong><br>
+        <input id="local-pealkiri" type="text" placeholder="nt. Minu joonis, Kasvuala piir" style="padding:8px; width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:6px;" />
+      </label>
+      
+      <label><strong>Laiem kirjeldus / märkused (kuni 300 märki):</strong><br>
+        <textarea id="local-noted" maxlength="300" placeholder="Kirjuta siia lisainfo..." style="padding:8px; width:100%; height:100px; box-sizing:border-box; border:1px solid #ccc; border-radius:6px; resize:vertical; font-family:inherit;"></textarea>
+      </label>
+      
+      <div style="display:flex; gap:10px; margin-top:8px; justify-content:flex-end;">
+        <button id="local-cancel-btn" type="button" style="padding:8px 16px; background:#ccc; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Tühista</button>
+        <button id="local-save-btn" type="button" style="padding:8px 16px; background:#a3005a; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Salvesta lokaalselt</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- selgitus: moodulite laadimine järjekorras; need failid asuvad harus refactor/skeleton-modularize/js/ -->
+  
+  <!-- kuller.html — Veendu, et failide laadimise järjekord on täpselt selline: -->
+  <!-- kuller.html — Skriptide täielik ja toimiv ahel: -->
+  <script src="js/ol-loader.js"></script>
+  <script src="js/map-core.js"></script>
+  <script src="js/draw.js"></script>
+  <script src="js/persistence.js"></script>
+  
+  <!-- SUPABASE INTERAHEL -->
+  <script type="module" src="supabase-client.js"></script> <!-- Moodulina, sest laeb CDN-ist -->
+  <script src="js/supabase-mediator.js"></script> <!-- Tavaline skript, saab kliendi aknast kätte -->
+  <script src="js/supabase-sync.js"></script> <!-- Tavaline skript, saab mediatori kätte -->
+  
+  <script src="js/ui.js"></script> <!-- Tavaline skript, juhib aknaid -->
+  <script src="js/kaart-app.js"></script> <!-- Pea-liim -->
+
+  <!-- kuller.html — Keskne ja ainus käivitusjuht lehe lõpus: -->
+  <script>
+    loadOl(() => { 
+      try { 
+        if (typeof initApp === 'function') {
+          // 1. Paneme kaardi püsti (loob window.mapObjects)
+          initApp(); 
+          console.log("✦ Dirigent: Kaart algatatud.");
+
+          // 2. Paneme tööle nupud, aknad ja ribad (ui.js ja kaart-app.js)
+          if (typeof window.initKaartApp === 'function') {
+            window.initKaartApp();
+          }
+
+          // 3. Tõmbame pilvest andmed kaardile
+          if (typeof window.refreshSupabaseData === 'function') {
+            window.refreshSupabaseData();
+          }
+        } else {
+          console.error("✦ Dirigent VIGA: initApp funktsioon puudub!");
+        }
+      } catch(e) { 
+        console.error("✦ Dirigent KRIITILINE VIGA stardis:", e); 
+      } 
+    });
+  </script>
+</body>
+
+
+
+
+
+</html>
+
