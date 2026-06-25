@@ -105,6 +105,37 @@
   // --- MODAALIDE AKTIIVNE ADAPTER ---
   // js/ui.js — TÄIELIKULT LIHVITUD modalAdapter FUKNKTSIOON
 function modalAdapter() {
+  // js/ui.js — Kopeeri see plokk funktsiooni modalAdapter() algusesse:
+
+  const coverPage = document.getElementById('app-cover-page');
+  const coverExploreBtn = document.getElementById('cover-explore-btn');
+  const coverLoginBtn = document.getElementById('cover-login-btn');
+
+  if (coverPage) {
+    // 1. KÄSK: Mine uudistama -> esikaas libiseb sujuvalt üles eest ära!
+    if (coverExploreBtn) {
+      coverExploreBtn.onclick = function() {
+        coverPage.classList.add('fade-out');
+        console.log("✦ UI: Esikaas suletud, kasutaja läks uudistama.");
+      };
+    }
+
+    // 2. KÄSK: Spetsialisti sisselogimine -> avab kaardi taustal sisselogimise akna
+    if (coverLoginBtn) {
+      coverLoginBtn.onclick = function() {
+        // Libistame kaane eest ära, et modal oleks näha
+        coverPage.classList.add('fade-out');
+        
+        // Avame kohe sisselogimise hüpiku
+        const loginModal = document.getElementById('login-modal');
+        if (loginModal) {
+          loginModal.classList.add('open');
+          loginModal.style.display = 'flex';
+        }
+      };
+    }
+  }
+
   console.log("⏳ UI: Seon nupud ja klikid...");
 
   const logo = document.getElementById('orchid-logo-svg');
