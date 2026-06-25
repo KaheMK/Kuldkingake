@@ -15,6 +15,42 @@
   </style>
 </head>
 <body>
+    <!-- index.html — Lisa see plokk kohe <body> tagi algusesse: -->
+<div id="app-cover-page" class="cover-page">
+  <div class="cover-card">
+    <!-- Orhidee logo koopia esikaanel -->
+   <svg id="orchid-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="48" height="48" tabindex="0" role="img" aria-label="Orhidee logo">
+          <title>Orhidee</title>
+          <g fill="none" stroke="#a3005a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M60 18c6 0 12 4 14 9 2 5 1 10-2 14-3 4-8 6-12 6s-9-2-12-6c-3-4-4-9-2-14 2-5 8-9 14-9z"/>
+            <path d="M60 36c8 0 16 6 20 12 4 6 4 14 0 20-4 6-12 10-20 10s-16-4-20-10c-4-6-4-14 0-20 4-6 12-12 20-12z"/>
+            <path d="M36 44c6-2 12 0 16 4" />
+            <path d="M84 44c-6-2-12 0-16 4" />
+            <path d="M60 56c4 0 8 3 8 6s-4 6-8 6-8-3-8-6 4-6 8-6z"/>
+            <path d="M60 70v12" />
+            <path d="M52 30c-6 6-10 14-10 22" />
+            <path d="M68 30c6 6 10 14 10 22" />
+          </g>
+        </svg>
+    
+    <h2>Orhideeliste kasvualad</h2>
+    <h3 style="margin: 0 0 20px 0; color: #666; font-weight: 500;">Palivere looduse infosüsteem</h3>
+    
+    <p style="font-size: 14px; color: #444; line-height: 1.4; margin-bottom: 24px;">
+      Tere tulemast Palivere orhideeliste kaardirakendusse. Tegu on nutika abilisega haruldaste liikide maastikulisel jälgimisel ja teadusandmete fikseerimisel.
+    </p>
+
+    <div class="cover-actions">
+      <!-- Nupp 1: Viib kohe kaardile uudistama -->
+      <button id="cover-explore-btn" type="button" class="c-btn explore">Mine uudistama</button>
+      
+      <!-- Nupp 2: Avab sisselogimise neile, kel õigused -->
+      <button id="cover-login-btn" type="button" class="c-btn login">Spetsialisti sisselogimine</button>
+    </div>
+    
+    <p style="margin-top: 20px; font-size: 11px; color: #999;">Kahem IS © 2026</p>
+  </div>
+</div>
   <!-- Fullscreen loader -->
   <div id="page-loader" aria-hidden="false"><div class="inner">Laadin kaarti…</div></div>
   <!-- Topbar kept in DOM but hidden via CSS for accessibility -->
