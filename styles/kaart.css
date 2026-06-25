@@ -70,6 +70,105 @@ html, body {
 .login-badge{background:#fff;border:1px solid #ddd;padding:6px 10px;border-radius:6px;cursor:pointer}
 .sidebar-edge{position:absolute;left:-12px;top:0;bottom:0;width:12px;background:linear-gradient(180deg,#ff4da6,#c2185b);border-radius:6px 0 0 6px}
 #__flash_msg{position:fixed;left:12px;bottom:12px;padding:8px 12px;background:rgba(0,0,0,0.7);color:#fff;border-radius:6px;z-index:100000}
+
+/* styles/kaart.css — ESIKAANE (COVER PAGE) VISUAALNE DISAIN */
+
+.cover-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100dvh;
+  /* KULDREEL: Laeb taustaks ilusa looduspildi ja teeb selle mahedalt uduseks */
+  background: linear-gradient(rgba(24, 1, 41, 0.4), rgba(24, 1, 41, 0.4)), 
+              url('../Kuldking.jpg') no-repeat center center;
+  background-size: cover;
+  display: flex;
+  align-items: center;
+  justify-content: right;
+  z-index: 999999; /* Istub absoluutselt kõige, ka loaderi peal */
+  padding: 20px;
+  box-sizing: border-box;
+  transition: transform 0.5s cubic-bezier(0.77, 0, 0.175, 1), opacity 0.4s ease;
+}
+
+/* Kui esikaas eest ära lükatakse, libiseb see sujuvalt üles kosmosesse */
+.cover-page.fade-out {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Keskmine mõnusa välimusega aknake */
+.cover-card {
+  background: rgba(255, 255, 255, 0.96);
+  padding: 35px 30px;
+  border-radius: 16px;
+  max-width: 420px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px); /* Klaasiefekt akna ümber */
+}
+
+.cover-card h2 {
+  margin: 12px 0 4px 0;
+  color: #a3005a;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.cover-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+/* Esikaane nuppude stiilid */
+.c-btn {
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.c-btn.explore {
+  background: #a3005a;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(163, 0, 90, 0.3);
+}
+
+.c-btn.explore:hover {
+  background: #c2006b;
+  transform: translateY(-1px);
+}
+
+.c-btn.login {
+  background: #f0f4f8;
+  color: #2c3e50;
+  border: 1px solid #d0d7de;
+}
+
+.c-btn.login:hover {
+  background: #e1e8f0;
+}
+
+/* MOBIILI KOHANDUS: Teeme akna mobiilis veidi tihedamaks, et mahuks pisikesele ekraanile */
+@media (max-width: 480px) {
+  .cover-card {
+    padding: 25px 20px;
+  }
+  .cover-card h2 {
+    font-size: 22px;
+  }
+}
 /* styles/kaart.css — LÕPULIK MOBIILIEKRAANI OPTIMEERIMINE */
 
 @media (max-width: 768px) {
