@@ -307,8 +307,7 @@ function modalAdapter() {
     }
   }
 
-  // Käivitame kuulamise
-  startAuthListening();
+  
 
   // Eksporteerime UI mooduli globaalselt
 // js/ui.js — Otsi üles faili KÕIGE VIIMASED READ ja veendu, et nad on täpselt sellised:
