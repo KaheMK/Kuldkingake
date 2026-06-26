@@ -13,20 +13,35 @@
 // js/map-core.js — AMETLIK JA TÖÖTAV MAA-AMETI HÜBRIIDKAART (XYZ TAILID)
 
 // js/map-core.js — KORRASTATUD JA TÖÖTAV MAA-AMETI HÜBRIIDKAART
-
-// js/map-core.js — 100% TÖÖTAV JA AMETLIK MAA-AMETI HÜBRIIDKAART
-
 const cadastral = new ol.layer.Tile({
+  name: 'cadastre', 
   source: new ol.source.XYZ({
-    // Standardne OpenLayersi globaalne GoogleMaps-ühilduv (GMC) ruudustik.
-    // Kuna see kasutab standardset {y} päringut, kaob ära igasugune risk,
-    // et brauser kleebib numbreid domeeni nime otsa.
-    url: 'https://maaamet.ee{z}/{x}/{y}.png',
-    crossOrigin: 'anonymous'
+    // PARANDUS: Ametlik ja kontrollitud puhta ortofoto URL OpenLayersi jaoks
+    url: 'https://tiles.maaamet.ee/tm/tms/1.0.0/foto@GMC/{z}/{x}/{-y}.png',
+    crossOrigin: 'anonymous',
+    attributions: 'Aerofoto: &copy; Maa-amet'
   }),
-  visible: false, // Vaikimisi peidus, et algne vaade oleks puhas ja rahulik
-  zIndex: 100     // Alusbaasi peal, kuid jooniste all
+  visible: false, // Sinu kaart-app.js lülitab seda nupust
+  zIndex: 100     
 });
+
+//https://tiles.maaamet.ee/tm/tms/1.0.0/hybriid@GMC/{z}/{x}/{-y}.png  ei toimeta
+//https://tiles.maaamet.ee/tm/tms/1.0.0/foto@GMC/{z}/{x}/{-y}.png      toimetab
+//https://tiles.maaamet.ee/tm/tms/1.0.0/kaart@GMC/{z}/{x}/{-y}.png     toimetab
+//https://tiles.maaamet.ee/tm/tms/1.0.0/orto@GMC/{z}/{x}/{-y}.png     ei toimeta
+//https://tiles.maaamet.ee/tm/tms/1.0.0/reljeef@GMC/{z}/{x}/{-y}.png  ei toimeta
+//https://tiles.maaamet.ee/tm/tms/1.0.0/ky@GMC/{z}/{x}/{-y}.png       ei toimeta
+//https://tiles.maaamet.ee/tm/tms/1.0.0/ak@GMC/{z}/{x}/{-y}.png       ei toimeta Ajalooline aluskaart (Eesti kaart aastatest 1995–2009)
+//https://tiles.maaamet.ee/tm/tms/1.0.0/ew25@GMC/{z}/{x}/{-y}.png     ei toimeta Eesti Vabariigi ajalooline topokaart (1930ndad aastad)
+//
+
+
+
+
+
+
+
+
 
 
 
