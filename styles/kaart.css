@@ -186,4 +186,33 @@ html, body {
   }
 }
 
+#käsiraamat-modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 10002;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.käsiraamat-peidus { display: none !important; }
+.käsiraamat-sisu {
+    background: #1e251f; /* Sügav metsaroheline */
+    color: #e0e0e0;
+    width: 85%; max-width: 700px;
+    max-height: 80vh;
+    border-radius: 12px;
+    border: 2px solid #bf953f; /* Kuldne äär */
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+}
+.käsiraamat-keha { overflow-y: auto; margin-top: 15px; padding-right: 10px; }
+.käsiraamat-keha section { margin-bottom: 25px; border-bottom: 1px solid rgba(191, 149, 63, 0.2); 
+  padding-bottom: 15px; }
+.käsiraamat-keha h3 { color: #fcf6ba; margin-top: 0; }
+#sulge-käsiraamat { background: none; border: none; color: #bf953f; font-size: 28px; cursor: pointer; }
+.käsiraamat-päis { display: flex; justify-content: space-between; 
+  align-items: center; border-bottom: 2px solid #bf953f; padding-bottom: 10px; }
+
 
