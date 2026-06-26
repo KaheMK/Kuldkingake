@@ -6,7 +6,12 @@
 
   function escapeHtml(s=''){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); }
 
-  function setSidebarHtml(title, html){ const sidebarEl = document.getElementById('sliding-sidebar-content'); if (!sidebarEl) return; const preserved = document.getElementById('layer-switcher'); sidebarEl.innerHTML = ''; if (preserved) sidebarEl.appendChild(preserved); if (title) { const h=document.createElement('h2'); h.textContent=title; sidebarEl.appendChild(h); } const wrapper=document.createElement('div'); wrapper.innerHTML=html||''; sidebarEl.appendChild(wrapper); }
+  function setSidebarHtml(title, html){ const sidebarEl = document.getElementById('sliding-sidebar-content'); 
+    if (!sidebarEl) return; const preserved = document.getElementById('layer-switcher'); sidebarEl.innerHTML = ''; 
+    if (preserved) sidebarEl.appendChild(preserved); if (title) { 
+      const h=document.createElement('h2'); h.textContent=title; sidebarEl.appendChild(h); } 
+      const wrapper=document.createElement('div'); wrapper.innerHTML=html||''; sidebarEl.appendChild(wrapper); 
+    }
 
  // js/kaart-app.js — UUENDATUD showFeatureInfo funktsioon
 // js/kaart-app.js — UUENDATUD JA PARANDATUD showFeatureInfo lokaalsete jooniste jaoks
@@ -19,7 +24,8 @@ function showFeatureInfo(feature){
   // Loeme andmed OpenLayersi standardi järgi (.get())
   const source = feature.get('_source') || 'local';
   const pealkiri = feature.get('pealkiri') || 'Kohalik joonis';
-  
+ 
+
   // PARANDUS: Loeme alati 'noted' välja, kuna salvestamisel kirjutame just sinna!
   const noted = feature.get('noted') || feature.get('note') || '';
   const created = formatDateIsoToDDMMYYYY(feature.get('created_at') || feature.get('createdAt') || feature.get('created'));
@@ -32,7 +38,7 @@ function showFeatureInfo(feature){
     } else if (dbNahtavus === 'avalik') {
       dbNahtavus = 'Avalik vaatlus (Kõik näevad)';
     }
-
+     
     const liik = feature.get('liik') || '';
     const kogus = feature.get('kogus') || '';
     const ohustatus = feature.get('ohustatus') || '';
@@ -604,61 +610,77 @@ document.getElementById('ribbon-clear')?.addEventListener('click', async () => {
 
 // js/kaart-app.js — TÄIELIKULT PUHASTATUD KIHTIDE LÜLITAMINE
 
-function wireSidebarToggle() {
-  console.log("⏳ Peakood: Seon kihtide lülitamise nupud...");
-  
-  const objs = window.mapObjects;
-  if (!objs || !objs.layers) {
-    console.warn("Peakood: mapObjects või layers puudub, ei saa nuppe siduda.");
-    return;
-  }
 
-  const layers = objs.layers;
+// GLOBAALNE JA DÜNAAMILINE KIHTIDE LÜLITAJA (Ei karda külgriba sisu uuendamist)
+// GLOBAALNE KIHTIDE LÜLITAJA (VS Code-is testimiseks ja tööks)
+// GLOBAALNE KIHTIDE LÜLITAJA (Versioon, mis reageerib igale klikile ja leiab Hübriidi üles)
+const slidingSidebar = document.getElementById('sliding-sidebar-content');
+if (slidingSidebar) {
+    // Eemaldame igaks juhuks vanad kuularid, kui need on olemas, ja paneme puhta sündmuse
+    slidingSidebar.removeAttribute('data-has-listener'); 
+    
+    slidingSidebar.addEventListener('change', function(e) {
+        const target = e.target;
+        if (!target || target.type !== 'checkbox') return;
 
-  // 1. LÜLITI: Baaskaart (OSM)
-  const cbOsm = document.getElementById('ls-osm');
-  if (cbOsm) {
-    cbOsm.onchange = function() {
-      if (layers.osm) {
-        layers.osm.setVisible(cbOsm.checked);
-        console.log("✦ Peakood: Baaskaardi nähtavus =", cbOsm.checked);
-      }
-    };
-  }
+        console.log("✦ Switcher sai kliki elemendilt, mille ID on:", target.id, "ja olek:", target.checked);
 
-  // 2. LÜLITI: Hübriidkaart (Aerofoto Maa-ametist)
-  const cbHybrid = document.getElementById('ls-cad');
-  if (cbHybrid) {
-    cbHybrid.onchange = function() {
-      if (layers.cadastral) {
-        // Kasutame ainult korrektset OpenLayersi funktsiooni setVisible
-        layers.cadastral.setVisible(cbHybrid.checked);
-        console.log("✦ Peakood: Hübriidkaardi nähtavus =", cbHybrid.checked);
-      }
-    };
-  }
+        const reaalneKaart = window.mapObjects?.map;
+        if (!reaalneKaart) {
+            console.warn("✦ Switcher teavitus: Kaardiobjekti ei leitud.");
+            return;
+        }
 
-  // 3. LÜLITI: Joonistused (Nii kohalikud kui pilve omad korraga)
-  const cbDraw = document.getElementById('ls-draw');
-  if (cbDraw) {
-    cbDraw.onchange = function() {
-      // Kohalik joonistuskiht
-      if (layers.drawLayer) {
-        layers.drawLayer.setVisible(cbDraw.checked);
-      }
-      
-      // Supabase pilveandmete kiht (otsime selle üles unikaalse zIndex-i järgi)
-      if (objs.map) {
-        objs.map.getLayers().forEach(layer => {
-          if (layer && typeof layer.getZIndex === 'function' && layer.getZIndex() === 900) {
-            layer.setVisible(cbDraw.checked);
-          }
-        });
-      }
-      console.log("✦ Peakood: Joonistuste kihtide nähtavus =", cbDraw.checked);
-    };
-  }
+        // 1. BAASKAART (OSM)
+        if (target.id === 'ls-osm') {
+            reaalneKaart.getLayers().forEach(layer => {
+                if (layer && typeof layer.getSource === 'function' && layer.getSource() instanceof ol.source.OSM) {
+                    layer.setVisible(target.checked);
+                    console.log("🎯 OSM aluskaart lülitatud:", target.checked);
+                }
+            });
+        }
+
+        // 2. HÜBRIIDKAART (Aerofoto - Otsime ID järgi VÕI teksti järgi, kui ID alt vedas!)
+        if (target.id === 'ls-cad' || target.parentElement.textContent.includes("Hübriid") || target.parentElement.textContent.includes("Aerofoto")) {
+            console.log("🎯 Hübriidkaardi käsk tuvastatud! Otsime kihti kaardilt...");
+            let hybriidLeitud = false;
+            
+            reaalneKaart.getLayers().forEach(layer => {
+                if (layer) {
+                    // Otsime Sinu map-core.js failis loodud kihti 'cadastral' nime või z-indexi järgi
+                    if (layer.get('name') === 'cadastre' || layer.getZIndex() === 100) {
+                        layer.setVisible(target.checked);
+                        hybriidLeitud = true;
+                        console.log("🎯 Hübriidkiht (cadastral) edukalt lülitatud olekusse:", target.checked);
+                    }
+                }
+            });
+            
+            if (!hybriidLeitud) {
+                console.warn("⚠️ Hoiatus: Kaardilt ei leitud kihti nimega 'cadastre' või z-indexiga 100!");
+            }
+        }
+
+        // 3. JOONISTUSED (Supabase peitmine, kohalik jääb puutumata)
+        if (target.id === 'ls-draw') {
+            const pilveAllikas = window.__supabaseSource;
+            reaalneKaart.getLayers().forEach(layer => {
+                if (pilveAllikas && typeof layer.getSource === 'function' && layer.getSource() === pilveAllikas) {
+                    layer.setVisible(target.checked);
+                    console.log("🎯 Supabase pilvekiht lülitatud olekusse:", target.checked);
+                }
+            });
+        }
+    });
+    console.log("✦ Peakood: Ülitundlik layer-switcher on seotud.");
 }
+
+
+
+
+
+
 
 
 
@@ -771,13 +793,6 @@ map.on('singleclick', (evt) => {
 window.initKaartApp = initKaartApp;
 
 // Sündmuse kuulaja fallbackiks, kui failid laevad teises rütmis
-// js/kaart-app.js — MINE FAILI KÕIGE LÕPPU JA ASENDA VIIMASED READ SELLEGA:
-
-// LÕPLIK PARANDUS: Seome funktsiooni otseselt ja koheselt akna külge,
-// et HTML-i lõpus olev dirigent saaks selle ilma vigadeta sekundipealt käivitada!
-window.initKaartApp = initKaartApp;
-
-// Sündmuse kuulaja fallbackiks, kui failid peaksid laadima ootamatus rütmis
 if (window.mapObjects) {
   initKaartApp();
 } else {
