@@ -22,9 +22,13 @@ html, body {
   pointer-events: auto; /* Garanteerib, et kaart võtab klikke vastu */
 }
 
-#map-branding{position:absolute;left:35px;top:12px;display:flex;align-items:center;gap:10px;z-index:2400;pointer-events:none}
-#orchid-logo-svg { width:44px; height:44px; pointer-events:auto; cursor:pointer; background:rgba(255,255,255,0.95); padding:4px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.08); }
-#map-title{font-weight:800;color:#a3005a;font-size:16px;background:rgba(255,255,255,0.85);padding:4px 8px;border-radius:6px}
+#map-branding{position:absolute;left:35px;top:12px;display:flex;align-items:center;gap:10px;z-index:1000002;
+  pointer-events:none}
+#orchid-logo-svg { width:44px; height:44px; pointer-events:auto; 
+  cursor:pointer; background:rgba(190, 223, 105, 0.95); padding:4px; 
+  border-radius:8px; box-shadow:0 2px 6px rgba(140, 169, 228, 0.08); }
+#map-title{font-weight:800;color:#a3005a;font-size:16px;background:rgba(255,255,255,0.85);
+  padding:4px 8px;border-radius:6px}
 .auth-pill {
   position: absolute; top: 1px; left: 50%; transform: translateX(-50%);
   z-index: 2410; display: flex; border-radius: 8px; overflow: hidden;
@@ -64,12 +68,16 @@ html, body {
 .rbtn { background:#fff; border:1px solid #eee; padding:8px 10px; border-radius:8px; cursor:pointer; min-width:110px; font-weight:600; color:#333; }
 .rbtn.active { background:linear-gradient(180deg,#ff4da6,#c2185b); color:#fff; }
    
-.modal-backdrop{display:none;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999}
+.modal-backdrop{display:none;align-items:center;justify-content:center;
+  position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999}
 .modal-backdrop.open{display:flex!important}
-.modal-card{background:#fff;border-radius:10px;padding:18px;max-width:720px;width:96vw;max-height:86vh;overflow:auto}
+.modal-card{background:#fff;border-radius:10px;padding:18px;max-width:720px;width:96vw;
+  max-height:86vh;overflow:auto}
 .login-badge{background:#fff;border:1px solid #ddd;padding:6px 10px;border-radius:6px;cursor:pointer}
-.sidebar-edge{position:absolute;left:-12px;top:0;bottom:0;width:12px;background:linear-gradient(180deg,#ff4da6,#c2185b);border-radius:6px 0 0 6px}
-#__flash_msg{position:fixed;left:12px;bottom:12px;padding:8px 12px;background:rgba(0,0,0,0.7);color:#fff;border-radius:6px;z-index:100000}
+.sidebar-edge{position:absolute;left:-12px;top:0;bottom:0;width:12px;
+  background:linear-gradient(180deg,#ff4da6,#c2185b);border-radius:6px 0 0 6px}
+#__flash_msg{position:fixed;left:12px;bottom:12px;padding:8px 12px;background:rgba(0,0,0,0.7);
+  color:#fff;border-radius:6px;z-index:100000}
 
 /* styles/kaart.css — ESIKAANE (COVER PAGE) VISUAALNE DISAIN */
 
@@ -86,18 +94,26 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: right;
-  z-index: 999999; /* Istub absoluutselt kõige, ka loaderi peal */
+  z-index: 10002; /* Istub absoluutselt kõige, ka loaderi peal */
   padding: 20px;
   box-sizing: border-box;
   transition: transform 0.5s cubic-bezier(0.77, 0, 0.175, 1), opacity 0.4s ease;
 }
 
-/* Kui esikaas eest ära lükatakse, libiseb see sujuvalt üles kosmosesse */
+/* styles/kaart.css — Otsi faili lõpust üles see koht ja täienda seda: */
+/* styles/kaart.css — Otsi faili lõpust üles see koht ja asenda see täpselt nii: */
 .cover-page.fade-out {
   transform: translateY(-100%);
   opacity: 0;
-  pointer-events: none;
+  
+  /* LÕPLIK JA LOLLIKINDEL PARANDUS: 
+      pointer-events: none; keelab brauseril esikaane klikkide püüdmissüsteemi.
+      display: none; kaotab selle nähtamatu seina füüsiliselt ekraanilt ära! */
+  pointer-events: none !important;
+  display: none !important; 
 }
+
+
 
 /* Keskmine mõnusa välimusega aknake */
 .cover-card {
@@ -115,7 +131,7 @@ html, body {
 
 .cover-card h2 {
   margin: 12px 0 4px 0;
-  color: #a3005a;
+  color: #089a12;
   font-size: 26px;
   font-weight: 700;
 }
@@ -167,66 +183,6 @@ html, body {
   }
   .cover-card h2 {
     font-size: 22px;
-  }
-}
-/* styles/kaart.css — LÕPULIK MOBIILIEKRAANI OPTIMEERIMINE */
-
-@media (max-width: 768px) {
-  /* 1. Muudame logo ja pealkirja mobiilis ülipisikeseks ja kompaktseks */
-  #map-branding {
-    top: 6px;
-    left: 10px;
-    gap: 6px;
-    max-width: 60%;
-  }
-  #orchid-logo-svg {
-    width: 32px !important;
-    height: 32px !important;
-  }
-  #map-title {
-    font-size: 13px !important;
-    line-height: 1.2;
-  }
-
-  /* 2. Muudame sisselogimise pilli pisemaks ja nihutame selle nurgast natuke eemale */
-  #auth-pill {
-    top: 6px;
-    right: 10px;
-    transform: scale(0.85); /* Muudab nupud 15% väiksemaks */
-    transform-origin: top right;
-  }
-
-  /* 3. KULDREEGEL: Kui tööriistariba (tool-ribbon) EI OLE peidetud, 
-     siis peidame sisselogimise ja logo automaatselt EEST ÄRA! */
-  #tool-ribbon:not(.hidden) ~ #auth-pill,
-  #tool-ribbon:not(.hidden) ~ #map-branding {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease;
-  }
-
-  /* 4. Samamoodi, kui külgriba on lahti, peidame logod, et nad teksti peale ei roniks */
-  #sliding-sidebar.open ~ #auth-pill,
-  #sliding-sidebar.open ~ #map-branding {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  /* 5. Tööriistariba nupud mobiilis ritta, et näpp ja stylus tabaks paremini */
-  #tool-ribbon {
-    left: 5px;
-    right: 5px;
-    width: auto !important;
-    padding: 6px;
-    gap: 4px;
-    justify-content: space-between;
-  }
-  
-  .rbtn {
-    padding: 8px 6px !important;
-    font-size: 12px !important;
-    flex: 1; /* Nupud jagunevad võrdselt ära */
-    text-align: center;
   }
 }
 
