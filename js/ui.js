@@ -107,34 +107,55 @@
 function modalAdapter() {
   // js/ui.js — Kopeeri see plokk funktsiooni modalAdapter() algusesse:
 
+ // js/ui.js — Otsi üles esikaane nuppude juhtimise osa ja asenda see täpselt nii:
+
   const coverPage = document.getElementById('app-cover-page');
   const coverExploreBtn = document.getElementById('cover-explore-btn');
   const coverLoginBtn = document.getElementById('cover-login-btn');
 
   if (coverPage) {
-    // 1. KÄSK: Mine uudistama -> esikaas libiseb sujuvalt üles eest ära!
+    // 1. KÄSK: Mine uudistama -> võtame lukud maha ja libistame kaane eest ära!
     if (coverExploreBtn) {
       coverExploreBtn.onclick = function() {
         coverPage.classList.add('fade-out');
         console.log("✦ UI: Esikaas suletud, kasutaja läks uudistama.");
+        
+        // LÕPLIK PARANDUS: Võtame kaardilt ja logolt 'inert' luku maha, 
+        // et kõik klikid ja admin-modal hakkaksid sekundiga reaalajas tööle!
+        const mainArea = document.querySelector('main') || document.body;
+        if (typeof setInert === 'function') {
+          setInert(mainArea, false);
+        } else {
+          mainArea.removeAttribute('aria-hidden');
+        }
       };
     }
 
-    // 2. KÄSK: Spetsialisti sisselogimine -> avab kaardi taustal sisselogimise akna
+    // 2. KÄSK: Spetsialisti sisselogimine -> avab sisselogimise, aga võtab ka kaardilt luku maha
     if (coverLoginBtn) {
       coverLoginBtn.onclick = function() {
-        // Libistame kaane eest ära, et modal oleks näha
         coverPage.classList.add('fade-out');
         
-        // Avame kohe sisselogimise hüpiku
+        // Võtame ka siit kaardi luku maha
+        const mainArea = document.querySelector('main') || document.body;
+        if (typeof setInert === 'function') {
+          setInert(mainArea, false);
+        } else {
+          mainArea.removeAttribute('aria-hidden');
+        }
+        
+        // Avame sisselogimise hüpiku
         const loginModal = document.getElementById('login-modal');
         if (loginModal) {
           loginModal.classList.add('open');
           loginModal.style.display = 'flex';
+          // Lukustame tausta uuesti sisselogimise akna ajaks
+          if (typeof setInert === 'function') setInert(mainArea, true);
         }
       };
     }
   }
+
 
   console.log("⏳ UI: Seon nupud ja klikid...");
 
@@ -307,7 +328,7 @@ function modalAdapter() {
     }
   }
 
-  
+ 
 
   // Eksporteerime UI mooduli globaalselt
 // js/ui.js — Otsi üles faili KÕIGE VIIMASED READ ja veendu, et nad on täpselt sellised:
