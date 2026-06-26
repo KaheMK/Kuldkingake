@@ -15,11 +15,11 @@
   </style>
 </head>
 <body>
-    <!-- index.html — Lisa see plokk kohe <body> tagi algusesse: -->
+  <!-- index.html — Lisa see plokk kohe <body> tagi algusesse: -->
 <div id="app-cover-page" class="cover-page">
   <div class="cover-card">
-    
-    
+  <button id="käsiraamat-nupp" class="kuldne-nupp">📖 Süsteemi Käsiraamat</button>
+
     <h2>Orhideeliste kasvualad</h2>
     <h3 style="margin: 0 0 20px 0; color: #666; font-weight: 500;">Palivere looduse infosüsteem</h3>
     
@@ -38,6 +38,7 @@
     <p style="margin-top: 20px; font-size: 11px; color: #999;">Kahem IS © 2026</p>
   </div>
 </div>
+
   <!-- Fullscreen loader -->
   <div id="page-loader" aria-hidden="false"><div class="inner">Laadin kaarti…</div></div>
   <!-- Topbar kept in DOM but hidden via CSS for accessibility -->
@@ -62,6 +63,8 @@
             <path d="M68 30c6 6 10 14 10 22" />
           </g>
         </svg>
+      
+
         <div id="map-title">Orhideeliste kasvualad — Palivere</div>
       </div>
       <!-- KASUTAJA AUTH PILL (Supabase seisundite kuvamiseks) -->
@@ -239,6 +242,8 @@
   
   <script src="js/ui.js"></script> <!-- Tavaline skript, juhib aknaid -->
   <script src="js/kaart-app.js"></script> <!-- Pea-liim -->
+  <script src="manual.js"></script>
+
 
   <!-- kuller.html — Keskne ja ainus käivitusjuht lehe lõpus: -->
   <script>
