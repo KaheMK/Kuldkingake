@@ -342,6 +342,9 @@ function modalAdapter() {
   window.UIModule = { modalAdapter: modalAdapter };
 
 })(window);
+  } // ◄ See sulg sulgeb init() funktsiooni, mis selle nuppude sidumise ümber elab
+}; // ◄ See sulg koos semikooloniga sulgeb terve window.modalAdapter objekti
+
 
 
 
