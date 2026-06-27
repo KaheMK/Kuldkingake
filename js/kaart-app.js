@@ -25,7 +25,6 @@ function showFeatureInfo(feature){
   const source = feature.get('_source') || 'local';
   const pealkiri = feature.get('pealkiri') || 'Kohalik joonis';
  
-
   // PARANDUS: Loeme alati 'noted' välja, kuna salvestamisel kirjutame just sinna!
   const noted = feature.get('noted') || feature.get('note') || '';
   const created = formatDateIsoToDDMMYYYY(feature.get('created_at') || feature.get('createdAt') || feature.get('created'));
@@ -55,13 +54,21 @@ function showFeatureInfo(feature){
     setSidebarHtml(pealkiri, html);
   } else {
     // === PARANDATUD KOHALIKU OBJEKTI VAADE ===
-    // Nüüd kuvatakse 300-märgise laiendatava tekstikasti sisu vigadeta!
+    
+    // 🎯 KÜLGRIBA UUENDUS: Loeme omaniku andmed täiesti turvaliselt
+    const omanik = (feature && typeof feature.get === 'function') 
+      ? (feature.get('omanik') || 'Minu objekt') 
+      : 'Minu objekt';
+
     let html = `<div style="margin-bottom: 15px;">`;
     html += `<strong>Laiem kirjeldus / märkused:</strong>`;
     html += `<p style="background: #f0f4f8; padding: 10px; border-radius: 6px; white-space: pre-wrap; max-height: 150px; overflow-y: auto; border: 1px solid #d0d7de;">${escapeHtml(noted || 'Märkused puuduvad.')}</p>`;
     html += `</div>`;
     
     html += `<dl>`;
+    // 🎯 LISAMME OMANIKU REA LOENDISSE:
+    html += `<dt>Omanik / Vaatleja</dt><dd style="font-weight: bold; color: #bf953f;">${escapeHtml(omanik)}</dd>`;
+    
     html += `<dt>Salvestatud seadmesse</dt><dd>${escapeHtml(created)}</dd>`;
     html += `<dt>Andmete asukoht</dt><dd>Selle brauseri kohalik mälu (LocalStorage)</dd>`;
     html += `</dl>`;
@@ -237,8 +244,14 @@ document.getElementById('sci-save-btn').onclick = async function() {
 
 
   function wireToolbar(drawSource){
-    document.getElementById('ribbon-draw')?.addEventListener('click', () => { if (window.drawModule) window.drawModule.enableDraw('Polygon'); document.querySelectorAll('#tool-ribbon .rbtn').forEach(b=>b.classList.remove('active')); document.getElementById('ribbon-draw')?.classList.add('active'); });
-    document.getElementById('ribbon-modify')?.addEventListener('click', () => { if (window.drawModule) window.drawModule.enableDraw('Modify'); document.querySelectorAll('#tool-ribbon .rbtn').forEach(b=>b.classList.remove('active')); document.getElementById('ribbon-modify')?.classList.add('active'); });
+    document.getElementById('ribbon-draw')?.addEventListener('click', () => { 
+      if (window.drawModule) window.drawModule.enableDraw('Polygon'); 
+      document.querySelectorAll('#tool-ribbon .rbtn').forEach(b=>b.classList.remove('active')); 
+      document.getElementById('ribbon-draw')?.classList.add('active'); });
+    document.getElementById('ribbon-modify')?.addEventListener('click', () => { 
+      if (window.drawModule) window.drawModule.enableDraw('Modify'); 
+      document.querySelectorAll('#tool-ribbon .rbtn').forEach(b=>b.classList.remove('active')); 
+      document.getElementById('ribbon-modify')?.classList.add('active'); });
 
   // js/kaart-app.js — PARANDATUD JA LOLLIKINDEL ribbon-save KÄSITLEMINE
 
@@ -446,69 +459,123 @@ function avateadusAndmeteHupik(objektiAndmed, user) {
 
 
 
-// js/kaart-app.js — PARANDATUD JA MOBIILISÕBRALIK LAADIMISE NUPP
-
-document.getElementById('ribbon-load')?.addEventListener('click', () => {
-  console.log("⏳ Peakood: Avatatakse seadme failihaldur GeoJSON laadimiseks...");
-  
-  // Loome nähtamatu failivaliku sisendi, mis avab telefonis ametliku "Files" või "Downloads" äpi
-  const fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.accept = '.geojson, .json';
-
-  // Kui kasutaja valib seadmes faili, hakkame seda töötlema
-  fileInput.onchange = function(e) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const file = files[0];
-    const reader = new FileReader();
+// js/kaart-app.js — PUHASTATUD JA TÖÖKINDEL LAADIMISE NUPP
+// js/kaart-app.js — PUHASTATUD JA DUUBELDAMISKINDEL LAADIMISE NUPP
+const btnLoad = document.getElementById('ribbon-load');
+if (btnLoad) {
+  btnLoad.onclick = function() {
+    console.log("⏳ Peakood: Avatatakse seadme failihaldur GeoJSON laadimiseks...");
     
-    reader.onload = function(evt) {
-      try {
-        const format = new ol.format.GeoJSON();
-        // Loeme faili sisu sisse
-        const features = format.readFeatures(evt.target.result, {
-          dataProjection: 'EPSG:4326',
-          featureProjection: 'EPSG:3857'
-        });
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.geojson, .json';
 
-        if (features && features.length > 0) {
-          // Märgime imporditud kujundid lokaalseks allikaks, et külgriba neid tajuks
-          features.forEach(f => f.set('_source', 'local'));
-          
-          // Lisame kujundid kaardile joonistuskihti (drawSource)
-          if (window.mapObjects && window.mapObjects.drawSource) {
-            window.mapObjects.drawSource.addFeatures(features);
-            
-            // Salvestame andmed kohe ka selle seadme kohalikku mällu (LocalStorage)
-            if (window.persistence) {
-              window.persistence.pushSnapshot(window.mapObjects.drawSource);
-              window.persistence.saveToLocal(window.mapObjects.drawSource);
+    fileInput.onchange = function(e) {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+
+      const file = files[0];
+      const reader = new FileReader();
+      
+      reader.onload = function(evt) {
+        try {
+          const format = new ol.format.GeoJSON();
+          const features = format.readFeatures(evt.target.result, {
+            dataProjection: 'EPSG:4326',
+            featureProjection: 'EPSG:3857'
+          });
+
+          if (features && features.length > 0) {
+            // === SIIN ON MEIE PARANDUSED JA TÄIENDUSED ===
+            features.forEach(f => {
+              f.set('_source', 'local');
+              
+              // 1. LOEME ANDMED: Võtame failist õpilase nime ja värvi
+              const opilaseVarv = f.get('varv');
+              const opilaseNimi = f.get('opilane');
+              
+              // 2. KÜLGRIBA LAHTRITE JUHTIMINE (Eristame Omaniku ja Pealkirja)
+              if (opilaseNimi) {
+                f.set('omanik', opilaseNimi); // Salvestame eraldi uude lahtrisse "Omanik"
+              } else {
+                f.set('omanik', 'Minu objekt'); // Kui nime pole, on see vaikimisi "Minu objekt"
+              }
+
+              // 3. KAARDI VÄRVID: Kui failis on värv olemas, sundvärvime kujundi OpenLayersis ära!
+                           // 3. KAARDI VÄRVID & MARKERID: Kui failis on värv olemas, loome täieliku visuaali
+              if (opilaseVarv) {
+                const unikaalneStiil = new ol.style.Style({
+                  // A. JOONTE JA ALADE (Polygon/LineString) STIIL:
+                  stroke: new ol.style.Stroke({
+                    color: opilaseVarv,
+                    width: 3
+                  }),
+                  fill: new ol.style.Fill({
+                    color: opilaseVarv + '22' // Õrn läbipaistev täide alade sees
+                  }),
+                  
+                  // B. PUNKTIDE (Point) STIIL: See ongi see "halorõngas", mis teeb punkti kaardil nähtavaks!
+                  image: new ol.style.Circle({
+                    radius: 8, // Sisemise täpi suurus (mobiilis hea tabada)
+                    fill: new ol.style.Fill({ 
+                      color: opilaseVarv // Sisemine ring on õpilase värvi
+                    }),
+                    stroke: new ol.style.Stroke({ 
+                      color: '#ffffff', // KRIITILINE: Valge kontuur, mis eristub metsakaardil
+                      width: 3 
+                    })
+                  })
+                });
+                
+                // Kinnitame stiili otse kujundile eraldi, et see alistaks kihi vaikimisi reeglid
+                f.setStyle(unikaalneStiil);
+              }
+
+            });
+            // === PARANDUSTE LÕPP ===
+
+            if (window.mapObjects && window.mapObjects.drawSource) {
+              window.mapObjects.drawSource.addFeatures(features);
+              
+              if (window.persistence) {
+                window.persistence.pushSnapshot(window.mapObjects.drawSource);
+                window.persistence.saveToLocal(window.mapObjects.drawSource);
+              }
+              
+              alert(`Edukas! Kaardile laeti ${features.length} kohalikku objekti.`);
+              window.mapObjects.map.render();
             }
-            
-            alert(`Edukas! Kaardile laeti ${features.length} kohalikku objekti.`);
-            window.location.reload(); // Värskendus, et klikid hakkaksid uusi märkmeid kohe reaalajas tajuma
+          } else {
+            alert("Valitud fail ei sisaldanud ühtegi kaardiobjekti!");
           }
-        } else {
-          alert("Valitud fail ei sisaldanud ühtegi kaardiobjekti!");
+        } catch(err) {
+          console.error("Faili lugemise viga seadmes:", err);
+          alert("Faili laadimine ebaõnnestus! Fail on vigane või vales formaadis.");
         }
-      } catch(err) {
-        console.error("Faili lugemise viga seadmes:", err);
-        alert("Faili laadimine ebaõnnestus! Fail on vigane või vales formaadis.");
-      }
+      };
+      reader.readAsText(file);
     };
-    reader.readAsText(file);
+
+    fileInput.click();
   };
+}
 
-  // Käivitame failivaliku süsteemselt
-  fileInput.click();
-});
 
-    document.getElementById('ribbon-export')?.addEventListener('click', () => { if (window.persistence) window.persistence.exportGeoJSON(drawSource); });
+
+
+    document.getElementById('ribbon-export')?.addEventListener('click', () => { 
+      if (window.persistence) window.persistence.exportGeoJSON(drawSource); });
     // js/kaart-app.js — Asenda ribbon-clear klikikuulaja funktsioonis wireToolbar():
-document.getElementById('ribbon-clear')?.addEventListener('click', async () => {
+// === KUSTUTA NUPU DUUBELDAMISKINDEL PARANDUS ===
+const btnClear = document.getElementById('ribbon-clear');
+if (btnClear) {
+  // .onclick pühib automaatselt kõik mälus olevad vanad klikikuulajad minema
+  btnClear.onclick = async function() {
+
+  
   const selectedFeature = window.lastSelectedFeature;
+  // ... Sinu ülejäänud kustutamise kood läheb edasi täpselt nii nagu on ...
+
 
   // === RADA A: KASUTAJAL ON VALITUD ÜKS KONKREETNE KUJUND ===
   if (selectedFeature) {
@@ -599,9 +666,14 @@ document.getElementById('ribbon-clear')?.addEventListener('click', async () => {
     drawSource.clear(); 
     if (window.persistence && typeof window.persistence.saveToLocal === 'function') window.persistence.saveToLocal(drawSource); 
     window.lastSelectedFeature = null;
-    setSidebarHtml('Tühjendatud', '<p>Kaardilt eemaldatud kõik kohalikud joonised.</p>');
+     setSidebarHtml('Tühjendatud', '<p>Kaardilt eemaldatud kõik kohalikud joonised.</p>');
+      setSidebarHtml('Tühjendatud', '<p>Kaardilt eemaldatud kõik kohalikud joonised.</p>');
   }
-});
+}; // ◄ SULGUB PUHTALT ILMA addEventListener-i KAARTETA
+}
+
+// ◄ LISATUD KAITSE: Lubab kustutamisel käivituda ainult ühe korra!
+
 
     document.getElementById('ribbon-back')?.addEventListener('click', () => { if (window.persistence) window.persistence.undo(drawSource); });
   }
@@ -802,4 +874,50 @@ if (window.mapObjects) {
 }
 
 })(window);
+// === JOONISTAMISE TÜÜPIDE VALIKU JUHTIMINE (TÖÖKINDEL VERSIOON) ===
+const btnDraw = document.getElementById('ribbon-draw');
+const drawMenu = document.getElementById('ribbon-draw-menu');
+
+if (btnDraw && drawMenu) {
+  // 1. Kui vajutatakse "Joonista" nuppu, siis me lülitame menüüd sisse/välja
+  btnDraw.onclick = function(e) {
+    e.stopPropagation();
+    drawMenu.classList.toggle('dropdown-avatud');
+  };
+
+  // 2. Kui klikitakse menüüs olevale valikule (Punkt, Joon, Ala)
+  drawMenu.onclick = function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const targetLink = e.target.closest('a');
+    if (!targetLink) return;
+
+    // Loeme valitud tüübi (Point, LineString või Polygon)
+    const valitudTuup = targetLink.getAttribute('data-draw-type');
+    const tekstiSilt = targetLink.textContent.split(' ')[1]; // Võtab ikooni tagant sõna (nt "Punkt")
+
+    // Uuendame nupu teksti ja määrame külge uue tüübi, et Sinu joonistusmootor teaks, mida teha!
+    btnDraw.innerHTML = `Joonista (${tekstiSilt}) <span class="nooleke">▼</span>`;
+    btnDraw.setAttribute('data-type', valitudTuup);
+
+    // 🎯 LOOGILINE TRIPP: Salvestame valitud tüübi otse globaalsesse aknasse,
+    // et Sinu draw.js ja kaart-app.js näeksid seda muutujana 'type'!
+    window.__currentDrawType = valitudTuup;
+
+    // Uuendame menüüs visuaalselt, milline on aktiivne
+    drawMenu.querySelectorAll('a').forEach(a => a.classList.remove('aktiivne-tüüp'));
+    targetLink.classList.add('aktiivne-tüüp');
+
+    // Sulgeme menüü
+    drawMenu.classList.remove('dropdown-avatud');
+    
+    console.log(`🎯 Tüüp muudetud: ${valitudTuup}. Süsteem on valmis joonistama.`);
+  };
+
+  // Kui klikitakse kuskile mujale ekraanil, sulgeme menüü automaatselt
+  document.addEventListener('click', () => {
+    drawMenu.classList.remove('dropdown-avatud');
+  });
+}
 
