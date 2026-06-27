@@ -94,7 +94,17 @@
       <!-- Ribbon tab and tool buttons (map overlay) -->
       <div id="ribbon-tab" title="Tööriistad" role="button" tabindex="0">✦</div>
       <nav id="tool-ribbon" class="hidden" aria-hidden="true">
-        <button id="ribbon-draw" class="rbtn">Joonista</button>
+        
+        <!-- ASENDA index.html SEES VANA JOONISTA NUPP SELLEGA -->
+<div class="ribbon-dropdown-container">
+  <button id="ribbon-draw" class="rbtn" data-type="Polygon">Joonista <span class="nooleke">▼</span></button>
+  <div id="ribbon-draw-menu" class="dropdown-sisu">
+    <a href="#" data-draw-type="Point">📍 Punkt (Üksik leid)</a>
+    <a href="#" data-draw-type="LineString">📏 Joon (Matkarada/Siht)</a>
+    <a href="#" data-draw-type="Polygon" class="aktiivne-tüüp">🌲 Ala (Kasvukoht/Polügoon)</a>
+  </div>
+</div>
+
         <button id="ribbon-modify" class="rbtn">Muuda</button>
         <button id="ribbon-back" class="rbtn">Tagasi</button>
         <button id="ribbon-save" class="rbtn">Salvesta</button>
