@@ -214,5 +214,47 @@ html, body {
 #sulge-käsiraamat { background: none; border: none; color: #bf953f; font-size: 28px; cursor: pointer; }
 .käsiraamat-päis { display: flex; justify-content: space-between; 
   align-items: center; border-bottom: 2px solid #bf953f; padding-bottom: 10px; }
+/* --- JOONISTAMISE RIPPAMENÜÜ STIILID --- */
+.ribbon-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+.nooleke {
+  font-size: 10px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.dropdown-sisu {
+  display: none;
+  position: absolute;
+  background-color: #1e251f; /* Sügav metsaroheline nagu käsiraamat */
+  min-width: 180px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
+  border: 1px solid #bf953f; /* Kuldne äär */
+  border-radius: 4px;
+  z-index: 1005; /* Et oleks kaardi ja Ribboni peal */
+  top: 100%; left: 0;
+  margin-top: 5px;
+}
+.dropdown-sisu a {
+  color: #e0e0e0;
+  padding: 10px 14px;
+  text-decoration: none;
+  display: block;
+  font-size: 13px;
+  text-align: left;
+}
+.dropdown-sisu a:hover {
+  background-color: rgba(191, 149, 63, 0.2);
+  color: #fcf6ba;
+}
+.dropdown-sisu a.aktiivne-tüüp {
+  border-left: 3px solid #bf953f;
+  background-color: rgba(191, 149, 63, 0.1);
+}
+/* Klass, mis näitab menüüd, kui sellele klikitakse */
+.dropdown-avatud {
+  display: block !important;
+}
 
 
