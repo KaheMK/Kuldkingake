@@ -35,7 +35,8 @@
       }
 
       // Loome uue joonistamise (nt Polygon)
-      const drawInteraction = new ol.interaction.Draw({ source: objs.drawSource, type: type || 'Polygon' });
+      const loppTuup = window.__currentDrawType || type || 'Polygon';
+const drawInteraction = new ol.interaction.Draw({ source: objs.drawSource, type: loppTuup });
       map.addInteraction(drawInteraction);
       
       const modifyInteraction = new ol.interaction.Modify({ source: objs.drawSource });
