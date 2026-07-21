@@ -477,13 +477,30 @@ if (btnLoad) {
       const file = files[0];
       const reader = new FileReader();
       
-      reader.onload = function(evt) {
-        try {
-          const format = new ol.format.GeoJSON();
-          const features = format.readFeatures(evt.target.result, {
-            dataProjection: 'EPSG:4326',
-            featureProjection: 'EPSG:3857'
-          });
+     reader.onload = function(evt) {
+  try {
+    const failiSisuKettalt = evt.target.result.trim();
+    const SIGNATUUR = "KULDKINGAKE-SECURE:";
+
+    // KONTROLL: Kui fail ei alga meie päisega, viskame välja!
+    if (!failiSisuKettalt.startsWith(SIGNATUUR)) {
+      alert("❌ TURVATÕRGE: Seda faili ei ole loodud selles rakenduses! Avamine turvakaalutlustel keelatud.");
+      return; 
+    }
+
+    // Pakime lahti
+    const puhasBase64 = failiSisuKettalt.replace(SIGNATUUR, "");
+    const lahtipakkitudJSON = decodeURIComponent(escape(atob(puhasBase64)));
+
+    // Söödame OpenLayersile lahtipakkitud puhta teksti
+    const format = new ol.format.GeoJSON();
+    const features = format.readFeatures(lahtipakkitudJSON, {
+      dataProjection: 'EPSG:4326',
+      featureProjection: 'EPSG:3857'
+    });
+    
+    // ... siit edasi jookseb Sinu kood täpselt samamoodi edasi (features.forEach jne)
+
 
           if (features && features.length > 0) {
             // === SIIN ON MEIE PARANDUSED JA TÄIENDUSED ===
