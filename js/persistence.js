@@ -21,15 +21,35 @@
     }catch(e){ console.warn('persistence pushSnapshot', e); }
   }
 
-  function saveToLocal(source){
-    try{
-      const geojson = formatFeatures(source);
-      if (!geojson) return false;
-      localStorage.setItem(LOCAL_KEY, geojson);
-      flash('Salvestatud lokalStorage\'i');
-      return true;
-    }catch(e){ console.error('persistence saveToLocal', e); flash('Salvestus ebaõnnestus'); return false; }
+ function saveToLocal(source) {
+  try {
+    // Haarame ekraanilt sisendist praeguse aktiivse värvi koodi
+    const varvElement = document.getElementById('exp-opilane-varv') || document.getElementById('opilane-varv');
+    const aktiivneVarv = varvElement ? varvElement.value : '#ff0000';
+
+    // Salvestame värvid andmetesse, nimedele EI KOSUGEERI midagi ette!
+    source.getFeatures().forEach(f => {
+      if (!f.get('varv')) {
+        f.set('varv', aktiivneVarv);
+      }
+    });
+
+    const geojson = formatFeatures(source);
+    if (!geojson) return false;
+    localStorage.setItem(LOCAL_KEY, geojson);
+    flash('Salvestatud seadme mällu');
+    return true;
+  } catch(e) {
+    console.error('persistence saveToLocal', e);
+    flash('Salvestus ebaõnnestus');
+    return false;
   }
+}
+
+
+
+
+
 
   function loadFromLocal(source){
     try{
@@ -37,12 +57,46 @@
       if (!data) { flash('LocalStorage tühi'); return false; }
       const fmt = new ol.format.GeoJSON();
       const feats = fmt.readFeatures(data, { featureProjection: 'EPSG:3857' });
+      
+      // === SP IOONIVÄRGI VÄRVIDE TAASTAMINE LEHE RESTARDIL ===
+      if (feats && feats.length > 0) {
+        feats.forEach(f => {
+          const salvestatudVarv = f.get('varv');
+          
+          // Kui andmetes on värv olemas, loome OpenLayersi stiili uuesti
+          if (salvestatudVarv) {
+            const taastatudStiil = new ol.style.Style({
+              stroke: new ol.style.Stroke({
+                color: salvestatudVarv,
+                width: 3
+              }),
+              fill: new ol.style.Fill({
+                color: salvestatudVarv + '22' // Õrn läbipaistev täide kujundi sees
+              }),
+              image: new ol.style.Circle({
+                radius: 8,
+                fill: new ol.style.Fill({ 
+                  color: salvestatudVarv 
+                }),
+                stroke: new ol.style.Stroke({ 
+                  color: '#ffffff', // Valge kontuur, et eristuks taustast
+                  width: 3 
+                })
+              })
+            });
+            f.setStyle(taastatudStiil);
+          }
+        });
+      }
+      // === VÄRVIKONTROLLI LÕPP ===
+
       source.clear();
       source.addFeatures(feats);
       flash('Laetud localStorage\'ist');
       return true;
     }catch(e){ console.error('persistence loadFromLocal', e); flash('Laadimine ebaõnnestus'); return false; }
   }
+
 
   function exportGeoJSON(source){
     try{
@@ -157,7 +211,7 @@ function exportGeoJSON(drawSource) {
     // Katkestamise nupp
     document.getElementById('exp-katkesta').onclick = () => { seadedModal.style.display = 'none'; };
 
-    // Kui vajutatakse "Loo fail"
+ // Kui vajutatakse "Loo fail"
     document.getElementById('exp-genereeri').onclick = () => {
         const nimiInput = document.getElementById('exp-opilane-nimi').value.trim();
         const varvInput = document.getElementById('exp-opilane-varv').value;
@@ -183,61 +237,57 @@ function exportGeoJSON(drawSource) {
             return;
         }
 
-        // Pakime õpilase nime ja värvi absoluutselt igasse lahritesse, mida Sinu kaart-app.js oskab lugeda!
+        // Töötleme kujundid enne allalaadimist läbi, et nimed ja värvid paika panna
         if (geojsonEksportObject && Array.isArray(geojsonEksportObject.features)) {
-            geojsonEksportObject.properties = {
-                generator: "Kuldkingake Kooliprogramm",
-                opilane: nimiInput,
-                ekspordi_aeg: new Date().toISOString(),
-                globaalne_varv: varvInput
-            };
-
-                        // Käime kõik kujundid läbi ja loome kolm puhast ja eraldi lahtrit
             geojsonEksportObject.features.forEach((feature, index) => {
                 if (!feature.properties) feature.properties = {};
                 
-                // Säilitame õpilase enda pandud algse pealkirja (nt "Tammik")!
-                // Kui mingil põhjusel pealkirja polnud, paneme asenduse
+                // 1. ESMASE AUTORI JA EDASI-SAATMISE JÄLG:
+                const vanaAlgneAutor = feature.properties.algne_autor;
+                const vanaOpilane = feature.properties.opilane;
+
+                if (!vanaAlgneAutor) {
+                    // Kui failil pole üldse veel autorit, on see uhiuus objekt.
+                    // Lukustame esimese looja nime!
+                    feature.properties.algne_autor = nimiInput;
+                    feature.properties.opilane = nimiInput;
+                } else {
+                    // Fail on juba varem kellegi poolt tehtud ja meile saadetud!
+                    // Kontrollime, et me ei lisaks sama nime uuesti, kui sama inimene mitu korda ekspordib
+                    if (vanaOpilane && vanaOpilane !== nimiInput && !vanaOpilane.endsWith('/' + nimiInput)) {
+                        // Lisame eelmise omaniku nime otsa uue edastaja jälje: /SEDASI /EDASI
+                        feature.properties.opilane = vanaOpilane + '/' + nimiInput;
+                    } else if (!vanaOpilane) {
+                        feature.properties.opilane = vanaAlgneAutor + '/' + nimiInput;
+                    }
+                }
+
+                // 2. KUVATAV OMANIKU RIDA KÜLGRIBALE (Näitab tervet ahelat)
+                feature.properties.omanik = feature.properties.opilane;
+
+                // === KRIITILINE PARANDUS: ERINEVATE VÄRVIDE SÄILITAMINE ===
+                // Kui objektil on andmetes juba vana värv olemas (tulnud teisest failist),
+                // siis me EI TOHI seda üle kirjutada! Me hoiame algupärast värvi.
+                // Uue värvi ('varvInput') anname AINULT neile objektidele, mis on uhiuued.
+                if (!feature.properties.varv) {
+                    feature.properties.varv = varvInput;
+                }
+                // ========================================================
+
+                // Tagame, et algne pealkiri ei kaoks
                 const algnePealkiri = feature.properties.pealkiri || feature.properties.nimi || `Objekt ${index + 1}`;
-                
-                // 1. LAHTER - PEALKIRI: Jääb algupäraseks! (nt "Tammik")
                 feature.properties.pealkiri = algnePealkiri;
                 feature.properties.nimi = algnePealkiri;
-
-                // 2. LAHTER - OMANIK/VAATLEJA: Paneme täpse õpilase nime
-                feature.properties.opilane = nimiInput;
-                feature.properties.vaatleja = `Vaatleja: ${nimiInput} (Objekt ${index + 1})`;
-                
-                // 3. LAHTER - VÄRV: Salvestame värviratta koodi
-                feature.properties.varv = varvInput;
-                
-                // Sisselaadimise kavalus: kui Sinu külgriba kood kuvab andmeid tabelina, 
-                // siis kirjutame märkuste/kirjelduse algusesse ilusa reaga ka vaatleja nime,
-                // et see ilmuks automaatselt "Laiem kirjeldus / märkused" sektsiooni!
-                const vanaKirjeldus = feature.properties.kirjeldus || feature.properties.description || '';
-                feature.properties.kirjeldus = `[${feature.properties.vaatleja}]\n${vanaKirjeldus}`;
-                feature.properties.description = `[${feature.properties.vaatleja}]\n${vanaKirjeldus}`;
             });
-
-        } else {
-            alert("Viga: Andmed ei ole korrektses kaardiformaadis.");
-            return;
         }
 
-        // Loome puhta faili allalaadimise
-         // 1. Muudame objekti tekstiks
-const puhasJsonString = JSON.stringify(geojsonEksportObject);
+        // === SP IOONIVÄRGI KRÜPTEERING ===
+        const puhasJsonString = JSON.stringify(geojsonEksportObject);
+        const krüptoBase64 = btoa(unescape(encodeURIComponent(puhasJsonString)));
+        const salajaneFailiSisu = "KULDKINGAKE-SECURE:" + krüptoBase64;
 
-// 2. Teeme loetamatuks koodiks (Base64)
-const krüptoBase64 = btoa(unescape(encodeURIComponent(puhasJsonString)));
-
-// 3. Paneme päise külge – SIIT TULEB SEE "KULDKINGAKE-SECURE:" FAILISTART!
-const salajaneFailiSisu = "KULDKINGAKE-SECURE:" + krüptoBase64;
-
-// 4. Salvestame kettale (Blob-i sisse läheb salajaneFailiSisu)
-const failiBlob = new Blob([salajaneFailiSisu], { type: "application/geo+json;charset=utf-8;" });
-// ... siit edasi läheb Sinu kood täpselt samamoodi nagu enne (downloadAnchor jne)
-
+        // Allalaadimine
+        const failiBlob = new Blob([salajaneFailiSisu], { type: "application/geo+json;charset=utf-8;" });
         const failiUrl = URL.createObjectURL(failiBlob);
         
         const downloadAnchor = document.createElement('a');
@@ -253,8 +303,11 @@ const failiBlob = new Blob([salajaneFailiSisu], { type: "application/geo+json;ch
         URL.revokeObjectURL(failiUrl);
 
         seadedModal.style.display = 'none';
-        alert(`Suurepärane, ${nimiInput}! Sinu fail laeti edukalt alla unikaalse nimega. Saada see õpetajale!`);
+        alert(`Suurepärane, ${nimiInput}! Sinu fail laeti edukalt alla unikaalse nimega. Saada see edasi!`);
     };
+
+
+
 }
 
 // Kinnitame funktsiooni akna külge, et kaart-app.js selle üles leiaks
