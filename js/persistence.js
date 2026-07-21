@@ -23,14 +23,6 @@
 
  function saveToLocal(source) {
   try {
-    // 1. KORJA VÄRVID: Kui kujundil on OpenLayersis unikaalne stiil määratud, 
-    // siis uuendame andmeid, et LocalStorage seda pärast restarti mäletaks.
-    source.getFeatures().forEach(f => {
-      if (f.getStyle() && typeof f.getStyle().getStroke === 'function' && f.getStyle().getStroke()) {
-        f.set('varv', f.getStyle().getStroke().getColor());
-      }
-    });
-
     const geojson = formatFeatures(source);
     if (!geojson) return false;
     localStorage.setItem(LOCAL_KEY, geojson);
@@ -210,7 +202,7 @@ function exportGeoJSON(drawSource) {
     document.getElementById('exp-katkesta').onclick = () => { seadedModal.style.display = 'none'; };
 
  // Kui vajutatakse "Loo fail"
-    document.getElementById('exp-genereeri').onclick = () => {
+       document.getElementById('exp-genereeri').onclick = () => {
         const nimiInput = document.getElementById('exp-opilane-nimi').value.trim();
         const varvInput = document.getElementById('exp-opilane-varv').value;
 
@@ -219,10 +211,9 @@ function exportGeoJSON(drawSource) {
             return;
         }
 
-        // Loeme andmed Sinu orhideede ametlikust võtmest
         const kohalikudAndmedRaw = localStorage.getItem('orhideed_features_v1');
         if (!kohalikudAndmedRaw) {
-            alert("Sinu märkmik on tühi! Kaardile pole veel ühtegi kujundit joonistatud.");
+            alert("Sinu märkmik on tühi!");
             seadedModal.style.display = 'none';
             return;
         }
@@ -231,19 +222,18 @@ function exportGeoJSON(drawSource) {
         try {
             geojsonEksportObject = JSON.parse(kohalikudAndmedRaw);
         } catch (e) {
-            alert("Viga kohalike andmete lugemisel brauserist.");
+            alert("Viga andmete lugemisel.");
             return;
         }
 
-                // Töötleme kujundid enne allalaadimist läbi, et nimed ja värvid paika panna
         if (geojsonEksportObject && Array.isArray(geojsonEksportObject.features)) {
             geojsonEksportObject.features.forEach((feature, index) => {
                 if (!feature.properties) feature.properties = {};
                 
-                // 1. ESMASE AUTORI JA EDASI-SAATMISE JÄLG:
                 const vanaAlgneAutor = feature.properties.algne_autor;
                 const vanaOpilane = feature.properties.opilane;
 
+                // 1. NIMEDE AHEL (Spioonijälg)
                 if (!vanaAlgneAutor) {
                     feature.properties.algne_autor = nimiInput;
                     feature.properties.opilane = nimiInput;
@@ -254,47 +244,31 @@ function exportGeoJSON(drawSource) {
                         feature.properties.opilane = vanaAlgneAutor + '/' + nimiInput;
                     }
                 }
-
                 feature.properties.omanik = feature.properties.opilane;
 
-                // === SIIN ON VÄRVI MÄÄRAMISE VÕIM: HAKKAB PÄRISELT TOIMETAMA MODALIST ===
-                // Kui kujundil pole andmetes veel värvi (on uhiuus objekt selles brauseris),
-                // siis anname talle selle värvi, mille õpilane valis just seadete modal-aknast!
+                // 2. VÄRVIDE SÄILITAMINE: 
+                // Kui objektil on 'varv' JUBA OLEMAS (imporditud), siis me EI PUUTU SEDA!
+                // Ainult uued, ilma värvita objektid saavad modaali värvi!
                 if (!feature.properties.varv) {
                     feature.properties.varv = varvInput;
                 }
-                
-                // Tagame, et pealkirjad püsivad
+
                 const algnePealkiri = feature.properties.pealkiri || feature.properties.nimi || `Objekt ${index + 1}`;
                 feature.properties.pealkiri = algnePealkiri;
                 feature.properties.nimi = algnePealkiri;
             });
         }
 
-        // === KRIITILINE TÄIENDUS: KIRJUTAME VALITUD VÄRVID KA OTSE BRAUSERI LOCALSTORE'ISSE ===
-        // Sellega tagame, et modal-aknast valitud värvid salvestuvad Sinu ametlikku võtmesse püsivalt!
+        // Kirjutame igaks juhuks ka kohalikku mällu tagasi, et uued värvid säiliksid restardil
         localStorage.setItem('orhideed_features_v1', JSON.stringify(geojsonEksportObject));
-        
-        // Kui Sul on ligipääs OpenLayersi drawSource'ile ka siin funktsioonis, 
-        // võid igaks juhuks käivitada ka kaardi uuesti joonistamise:
-        if (window.mapObjects && window.mapObjects.drawSource) {
-            // See rida värskendab visuaalselt kaardi kujundid uute värvidega ekraanil kohe ära!
-            if (typeof loadFromLocal === 'function') loadFromLocal(window.mapObjects.drawSource);
-        }
-        // =================================================================================
 
-        // === SP IOONIVÄRGI KRÜPTEERING JA ALLALAADIMINE JÄTKUB SAMAMOODI ===
+        // Krüpteering ja allalaadimine
         const puhasJsonString = JSON.stringify(geojsonEksportObject);
         const krüptoBase64 = btoa(unescape(encodeURIComponent(puhasJsonString)));
         const salajaneFailiSisu = "KULDKINGAKE-SECURE:" + krüptoBase64;
-        
-        // (Siit edasi jookseb Sinu tavaline Blob-i loomine ja allalaadimise kood muutmata kujul edasi...)
 
-
-        // Allalaadimine
         const failiBlob = new Blob([salajaneFailiSisu], { type: "application/geo+json;charset=utf-8;" });
         const failiUrl = URL.createObjectURL(failiBlob);
-        
         const downloadAnchor = document.createElement('a');
         downloadAnchor.setAttribute("href", failiUrl);
         
@@ -303,12 +277,11 @@ function exportGeoJSON(drawSource) {
         
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
-        
         document.body.removeChild(downloadAnchor);
         URL.revokeObjectURL(failiUrl);
 
         seadedModal.style.display = 'none';
-        alert(`Suurepärane, ${nimiInput}! Sinu fail laeti edukalt alla unikaalse nimega. Saada see edasi!`);
+        alert(`Fail edukalt alla laetud unikaalse nimega!`);
     };
 
 
