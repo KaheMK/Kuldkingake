@@ -225,18 +225,19 @@ function exportGeoJSON(drawSource) {
         }
 
         // Loome puhta faili allalaadimise
-         // Loome puhta faili allalaadimise
-                // === SP IOONIVÄRGI KRÜPTEERING ALGAB ===
-        // 1. Teeme objektist esmalt standardse JSON stringi
-        const puhasJsonString = JSON.stringify(geojsonEksportObject);
-        
-        // 2. Muudame selle loetamatuks Base64 joruks (toetab ka eesti täpitähti tänu encodeURIComponent-ile)
-        const krüptoBase64 = btoa(unescape(encodeURIComponent(puhasJsonString)));
-        
-        // 3. Lisame ette unikaalse signatuuri, et Sinu äpp tunneks faili ära
-        const salajaneFailiSisu = "KULDKINGAKE-SECURE:" + krüptoBase64;
-        // === SP IOONIVÄRGI KRÜPTEERING LÕPP ===
-        const failiBlob = new Blob([jsonString], { type: "application/geo+json;charset=utf-8;" });
+         // 1. Muudame objekti tekstiks
+const puhasJsonString = JSON.stringify(geojsonEksportObject);
+
+// 2. Teeme loetamatuks koodiks (Base64)
+const krüptoBase64 = btoa(unescape(encodeURIComponent(puhasJsonString)));
+
+// 3. Paneme päise külge – SIIT TULEB SEE "KULDKINGAKE-SECURE:" FAILISTART!
+const salajaneFailiSisu = "KULDKINGAKE-SECURE:" + krüptoBase64;
+
+// 4. Salvestame kettale (Blob-i sisse läheb salajaneFailiSisu)
+const failiBlob = new Blob([salajaneFailiSisu], { type: "application/geo+json;charset=utf-8;" });
+// ... siit edasi läheb Sinu kood täpselt samamoodi nagu enne (downloadAnchor jne)
+
         const failiUrl = URL.createObjectURL(failiBlob);
         
         const downloadAnchor = document.createElement('a');
