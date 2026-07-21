@@ -225,7 +225,17 @@ function exportGeoJSON(drawSource) {
         }
 
         // Loome puhta faili allalaadimise
-        const jsonString = JSON.stringify(geojsonEksportObject, null, 2);
+         // Loome puhta faili allalaadimise
+                // === SP IOONIVÄRGI KRÜPTEERING ALGAB ===
+        // 1. Teeme objektist esmalt standardse JSON stringi
+        const puhasJsonString = JSON.stringify(geojsonEksportObject);
+        
+        // 2. Muudame selle loetamatuks Base64 joruks (toetab ka eesti täpitähti tänu encodeURIComponent-ile)
+        const krüptoBase64 = btoa(unescape(encodeURIComponent(puhasJsonString)));
+        
+        // 3. Lisame ette unikaalse signatuuri, et Sinu äpp tunneks faili ära
+        const salajaneFailiSisu = "KULDKINGAKE-SECURE:" + krüptoBase64;
+        // === SP IOONIVÄRGI KRÜPTEERING LÕPP ===
         const failiBlob = new Blob([jsonString], { type: "application/geo+json;charset=utf-8;" });
         const failiUrl = URL.createObjectURL(failiBlob);
         
