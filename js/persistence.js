@@ -23,14 +23,11 @@
 
  function saveToLocal(source) {
   try {
-    // Haarame ekraanilt sisendist praeguse aktiivse värvi koodi
-    const varvElement = document.getElementById('exp-opilane-varv') || document.getElementById('opilane-varv');
-    const aktiivneVarv = varvElement ? varvElement.value : '#ff0000';
-
-    // Salvestame värvid andmetesse, nimedele EI KOSUGEERI midagi ette!
+    // 1. KORJA VÄRVID: Kui kujundil on OpenLayersis unikaalne stiil määratud, 
+    // siis uuendame andmeid, et LocalStorage seda pärast restarti mäletaks.
     source.getFeatures().forEach(f => {
-      if (!f.get('varv')) {
-        f.set('varv', aktiivneVarv);
+      if (f.getStyle() && typeof f.getStyle().getStroke === 'function' && f.getStyle().getStroke()) {
+        f.set('varv', f.getStyle().getStroke().getColor());
       }
     });
 
@@ -45,6 +42,7 @@
     return false;
   }
 }
+
 
 
 
@@ -237,7 +235,7 @@ function exportGeoJSON(drawSource) {
             return;
         }
 
-        // Töötleme kujundid enne allalaadimist läbi, et nimed ja värvid paika panna
+                // Töötleme kujundid enne allalaadimist läbi, et nimed ja värvid paika panna
         if (geojsonEksportObject && Array.isArray(geojsonEksportObject.features)) {
             geojsonEksportObject.features.forEach((feature, index) => {
                 if (!feature.properties) feature.properties = {};
@@ -247,44 +245,51 @@ function exportGeoJSON(drawSource) {
                 const vanaOpilane = feature.properties.opilane;
 
                 if (!vanaAlgneAutor) {
-                    // Kui failil pole üldse veel autorit, on see uhiuus objekt.
-                    // Lukustame esimese looja nime!
                     feature.properties.algne_autor = nimiInput;
                     feature.properties.opilane = nimiInput;
                 } else {
-                    // Fail on juba varem kellegi poolt tehtud ja meile saadetud!
-                    // Kontrollime, et me ei lisaks sama nime uuesti, kui sama inimene mitu korda ekspordib
                     if (vanaOpilane && vanaOpilane !== nimiInput && !vanaOpilane.endsWith('/' + nimiInput)) {
-                        // Lisame eelmise omaniku nime otsa uue edastaja jälje: /SEDASI /EDASI
                         feature.properties.opilane = vanaOpilane + '/' + nimiInput;
                     } else if (!vanaOpilane) {
                         feature.properties.opilane = vanaAlgneAutor + '/' + nimiInput;
                     }
                 }
 
-                // 2. KUVATAV OMANIKU RIDA KÜLGRIBALE (Näitab tervet ahelat)
                 feature.properties.omanik = feature.properties.opilane;
 
-                // === KRIITILINE PARANDUS: ERINEVATE VÄRVIDE SÄILITAMINE ===
-                // Kui objektil on andmetes juba vana värv olemas (tulnud teisest failist),
-                // siis me EI TOHI seda üle kirjutada! Me hoiame algupärast värvi.
-                // Uue värvi ('varvInput') anname AINULT neile objektidele, mis on uhiuued.
+                // === SIIN ON VÄRVI MÄÄRAMISE VÕIM: HAKKAB PÄRISELT TOIMETAMA MODALIST ===
+                // Kui kujundil pole andmetes veel värvi (on uhiuus objekt selles brauseris),
+                // siis anname talle selle värvi, mille õpilane valis just seadete modal-aknast!
                 if (!feature.properties.varv) {
                     feature.properties.varv = varvInput;
                 }
-                // ========================================================
-
-                // Tagame, et algne pealkiri ei kaoks
+                
+                // Tagame, et pealkirjad püsivad
                 const algnePealkiri = feature.properties.pealkiri || feature.properties.nimi || `Objekt ${index + 1}`;
                 feature.properties.pealkiri = algnePealkiri;
                 feature.properties.nimi = algnePealkiri;
             });
         }
 
-        // === SP IOONIVÄRGI KRÜPTEERING ===
+        // === KRIITILINE TÄIENDUS: KIRJUTAME VALITUD VÄRVID KA OTSE BRAUSERI LOCALSTORE'ISSE ===
+        // Sellega tagame, et modal-aknast valitud värvid salvestuvad Sinu ametlikku võtmesse püsivalt!
+        localStorage.setItem('orhideed_features_v1', JSON.stringify(geojsonEksportObject));
+        
+        // Kui Sul on ligipääs OpenLayersi drawSource'ile ka siin funktsioonis, 
+        // võid igaks juhuks käivitada ka kaardi uuesti joonistamise:
+        if (window.mapObjects && window.mapObjects.drawSource) {
+            // See rida värskendab visuaalselt kaardi kujundid uute värvidega ekraanil kohe ära!
+            if (typeof loadFromLocal === 'function') loadFromLocal(window.mapObjects.drawSource);
+        }
+        // =================================================================================
+
+        // === SP IOONIVÄRGI KRÜPTEERING JA ALLALAADIMINE JÄTKUB SAMAMOODI ===
         const puhasJsonString = JSON.stringify(geojsonEksportObject);
         const krüptoBase64 = btoa(unescape(encodeURIComponent(puhasJsonString)));
         const salajaneFailiSisu = "KULDKINGAKE-SECURE:" + krüptoBase64;
+        
+        // (Siit edasi jookseb Sinu tavaline Blob-i loomine ja allalaadimise kood muutmata kujul edasi...)
+
 
         // Allalaadimine
         const failiBlob = new Blob([salajaneFailiSisu], { type: "application/geo+json;charset=utf-8;" });
