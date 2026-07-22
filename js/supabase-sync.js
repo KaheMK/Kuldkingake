@@ -44,7 +44,22 @@ function saaLiigiVarv(liik) {
   if (l.includes('kärbesõis')) return { fill: 'rgba(102, 51, 0, 0.2)', stroke: '#663300' };    // Tume maapruun
   if (l.includes('ööviiul')) return { fill: 'rgba(255, 255, 255, 0.3)', stroke: '#33cc33' };   // Valge-roheline kuma
   if (l.includes('sõrmkäpp')) return { fill: 'rgba(153, 51, 255, 0.2)', stroke: '#9933ff' };  // Sügavlilla
-  if (l.includes('maasapp')) return { fill: 'rgba(255, 102, 153, 0.2)', stroke: '#ff6699' };   // Roosa
+  if (l.includes('harilik käoraamat')) return { fill: 'rgba(255, 102, 153, 0.2)', stroke: '#ff6699' };   // Roosa
+  if (l.includes('rohekas käokeel')) return { fill: 'rgba(0, 255, 0, 0.2)', stroke: '#00ff00' };   // Roheline
+  if (l.includes('pruunikas pesajuur')) return { fill: 'rgba(153, 102, 0, 0.2)', stroke: '#996600' };   // Kastanpruun
+  if (l.includes('ainulehine soovalk')) return { fill: 'rgba(102, 102, 0, 0.2)', stroke: '#666600' };   // Tume kollane
+  if (l.includes('soohiilakas')) return { fill: 'rgba(0, 102, 204, 0.2)', stroke: '#0066cc' };   // Tume sinine
+  if (l.includes('harilik sookäpp')) return { fill: 'rgba(102, 153, 0, 0.2)', stroke: '#669900' };   // Tume roheline
+  if (l.includes('lõhnav käoraamat')) return { fill: 'hsla(308, 100%, 30%, 0.52)', stroke: 'rgb(153, 0, 133)' };   // Lilla
+  if (l.includes('tihedaõieline käoraamat')) return { fill: 'rgba(102, 0, 102, 0.2)', stroke: '#660066' };   // Tume lilla
+  if (l.includes('soo-neiuvaip')) return { fill: 'rgba(0, 204, 102, 0.2)', stroke: '#00cc66' };   // Tume roheline
+  if (l.includes('väikeselehine neiuvaip')) return { fill: 'rgba(102, 102, 0, 0.2)', stroke: '#666600' };   // Tume kollane
+  if (l.includes('laialehine neiuvaip')) return { fill: 'hsla(208, 100%, 40%, 0.78)', stroke: 'rgba(0, 102, 204, 0.83)' };   // Tume sinine
+  if (l.includes('tumepunane neiuvaip')) return { fill: 'rgba(204, 0, 0, 0.2)', stroke: '#cc0000' };   // Tume punane
+  if (l.includes('rohekas õõskeel')) return { fill: 'hsla(88, 100%, 50%, 0.98)', stroke: 'rgb(111, 255, 0)' };   // Roheline
+  if (l.includes('kõdu-koralljuur')) return { fill: 'rgba(255, 102, 0, 0.2)', stroke: '#ff6600' };   // Oranž
+  if (l.includes('punane tolmpea')) return { fill: 'rgba(255, 0, 0, 0.2)', stroke: '#ff0000' };   // Punane
+  if (l.includes('valge tolmpea')) return { fill: 'rgba(255, 255, 255, 0.2)', stroke: '#ffffff' };   // Valge
   
   // Fallback muudele vaatlustele (nt. metsad, tiigid jne)
   return { fill: 'rgba(0, 153, 255, 0.15)', stroke: '#0099ff' }; // Standardne sinine indikaator
