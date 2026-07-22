@@ -67,6 +67,22 @@ function looKäsiraamatuStruktuur() {
                         <li><strong>Juhendaja töölaud:</strong> Juhendaja saab laadida kõigi õpilaste failid kokku ühele kaardile (lokaalses raamis), et teha ühiseid järeldusi, analüüse ja õppetööd, ilma et see mõjutaks keskset pilvebaasi.</li>
                     </ul>
                 </section>
+                <!-- Käsiraamatu manual.js sisse, peatükk 5 alla: -->
+<section style="background: rgba(191, 149, 63, 0.08); padding: 15px; border-radius: 6px; border-top: 2px solid #bf953f; margin-top: 20px;">
+    <h3>🎓 Ülevaatlik töölaud: Objektide statistika & hindamine</h3>
+    <p style="font-size: 13px; color: #b0b0b0;">Siit näed kokkuvõtet kaardile laetud objektidest. Klikka objekti nimele, et eraldada tema vaatlused kaardil ülevaate saamiseks.</p>
+    
+    <!-- Nupp, mis värskendab ja arvutab tabeli andmed uuesti kokku -->
+    <button id="uuenda-statistika-btn" style="background: #bf953f; color: black; border: none; padding: 6px 12px; font-weight: bold; border-radius: 4px; cursor: pointer; font-size: 12px; margin-bottom: 12px;">
+        🔄 Värskenda ülevaadet
+    </button>
+
+    <!-- Dünaamiline tabel, kuhu JavaScript õpilased reas genereerib -->
+    <div id="opilaste-statistika-tabel" style="max-height: 200px; overflow-y: auto;">
+        <p style="font-style: italic; color: #888; font-size: 13px;">Tabel on tühi. Laadi esmalt Ribboni kaudu objektide GeoJSON failid sisse!</p>
+    </div>
+</section>
+
             </div>
         </div>
     </div>
@@ -103,3 +119,142 @@ function seostaJuhendiSündmused() {
         console.warn("Käsiraamatu avamise nuppu (#käsiraamat-nupp) ei leitud veel HTML-ist.");
     }
 }
+
+// === JUHENDAJA TÖÖLAUA STATISTIKA JA HINDAMISE LOOGIKA ===
+document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+        const uuendaBtn = document.getElementById('uuenda-statistika-btn');
+        if (uuendaBtn) {
+            uuendaBtn.addEventListener('click', genereeriOpilasteStatistika);
+        }
+        
+        // Automaatne värskendus ka käsiraamatu akna avamisel
+        const avaKäsiraamatNupp = document.getElementById('käsiraamat-nupp');
+        if (avaKäsiraamatNupp) {
+            avaKäsiraamatNupp.addEventListener('click', () => {
+                setTimeout(genereeriOpilasteStatistika, 300);
+            });
+        }
+    }, 1500);
+});
+
+// Globaalne muutuja, mis mäletab, millise õpilase peal õpetaja parajasti filtreerib
+window.__aktiivneFiltreeritavOpilane = null;
+
+function genereeriOpilasteStatistika() {
+    const tabeliKonteiner = document.getElementById('opilaste-statistika-tabel');
+    if (!tabeliKonteiner) return;
+
+    // 1. Korjame OpenLayersi joonistuskihist (drawSource) kokku kõik features
+    const drawSource = window.mapObjects?.drawSource;
+    if (!drawSource) {
+        tabeliKonteiner.innerHTML = `<p style="color: #ffaa00; font-size:13px;">⚠️ Hoiatus: Kaardimootori joonistuskiht pole veel kättesaadav.</p>`;
+        return;
+    }
+
+    const kõikKujundid = drawSource.getFeatures();
+    
+    // 2. ARVUTAME ANDMED: Käime kujundid läbi ja loeme 'opilane' väärtuseid
+    let opilasteStatistika = {}; // Struktuur: { "Juku": 5, "Manni": 3 }
+    let kohalikudMärkmedArv = 0;
+
+    kõikKujundid.forEach(f => {
+        const nimi = f.get('opilane');
+        if (nimi) {
+            opilasteStatistika[nimi] = (opilasteStatistika[nimi] || 0) + 1;
+        } else {
+            kohalikudMärkmedArv++;
+        }
+    });
+
+    const unikaalsedOpilased = Object.keys(opilasteStatistika);
+
+    if (unikaalsedOpilased.length === 0 && kohalikudMärkmedArv === 0) {
+        tabeliKonteiner.innerHTML = `<p style="font-style: italic; color: #888; font-size: 13px;">Kaardil pole ühtegi objekti. Laadi esmalt failid sisse!</p>`;
+        return;
+    }
+
+    // 3. EHITAME TABELI VISUAALI (Stiilne ja puhas ridade nimekiri)
+    let tabeliHTML = `<table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; color: #e0e0e0;">`;
+    tabeliHTML += `<tr style="border-bottom: 1px solid #bf953f; color: #fcf6ba; font-weight: bold;"><th style="padding: 6px 4px;">Vaatleja</th><th style="padding: 6px 4px; text-align: center;">Objekte</th><th style="padding: 6px 4px; text-align: right;">Tegevus</th></tr>`;
+
+    // Kui seadmes on isiklikke jooniseid ("Minu objekt")
+    if (kohalikudMärkmedArv > 0) {
+        tabeliHTML += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="padding: 8px 4px; color: #aaa; font-style: italic;">👤 Minu kohalikud märkmed</td>
+            <td style="padding: 8px 4px; text-align: center; color: #aaa;">${kohalikudMärkmedArv}</td>
+            <td style="padding: 8px 4px; text-align: right; color: #666; font-size: 11px;">(Põhikaart)</td>
+        </tr>`;
+    }
+
+    // Genereerime iga õpilase kohta oma rea
+    unikaalsedOpilased.forEach(nimi => {
+        const onFiltreeritud = (window.__aktiivneFiltreeritavOpilane === nimi);
+        const nupuTekst = onFiltreeritud ? "👁️ Näita kõiki" : "🔍 Isoleeri";
+        const nupuVarv = onFiltreeritud ? "#ffaa00" : "#bf953f";
+        const reaTaust = onFiltreeritud ? "background: rgba(191,149,63,0.15);" : "";
+
+        tabeliHTML += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05); ${reaTaust}">
+            <td style="padding: 8px 4px; font-weight: bold; color: #fff;">🎓 ${nimi}</td>
+            <td style="padding: 8px 4px; text-align: center; font-weight: bold; color: #fcf6ba;">${opilasteStatistika[nimi]}</td>
+            <td style="padding: 8px 4px; text-align: right;">
+                <button onclick="filtreeriOpilaseObjektid('${nimi.replace(/'/g, "\\'")}')" style="background: ${nupuVarv}; color: black; border: none; padding: 4px 8px; font-weight: bold; border-radius: 3px; cursor: pointer; font-size: 11px;">
+                    ${nupuTekst}
+                </button>
+            </td>
+        </tr>`;
+    });
+
+    tabeliHTML += `</table>`;
+    tabeliKonteiner.innerHTML = tabeliHTML;
+}
+
+// 4. FILTREERIMISE SÜDA: See funktsioon peidab ja näitab reaalajas OpenLayersi kujundeid!
+function filtreeriOpilaseObjektid(opilaseNimi) {
+    const drawSource = window.mapObjects?.drawSource;
+    const map = window.mapObjects?.map;
+    if (!drawSource || !map) return;
+
+    const kõikKujundid = drawSource.getFeatures();
+
+    // Kui klikiti õpilasele, kes on juba filtreeritud -> Tühistame filtri (näitame kõiki)
+    if (window.__aktiivneFiltreeritavOpilane === opilaseNimi) {
+        window.__aktiivneFiltreeritavOpilane = null;
+        
+        // Taastame kõigi kujundite nähtavuse (eemaldame tühja stiili)
+        kõikKujundid.forEach(f => f.setStyle(null)); 
+        console.log("✦ Hindamine: Filter tühistatud. Kõik objektid on nähtaval.");
+    } else {
+        // Rakendame uue filtri
+        window.__aktiivneFiltreeritavOpilane = opilaseNimi;
+
+        kõikKujundid.forEach(f => {
+            const fOpilane = f.get('opilane');
+            
+            if (fOpilane === opilaseNimi) {
+                // SELLE ÕPILASE OBJEKT: Jätame nähtavaks (null tähendab, et kasutab oma ilusat unikaalset värvi!)
+                f.setStyle(null); 
+            } else {
+                // TEISTE TÖÖD: Peidame ära, määrates neile täiesti tühja ja nähtamatu stiili!
+                f.setStyle(new ol.style.Style({})); 
+            }
+        });
+        console.log(`✦ Hindamine: Isoleeritud  ${opilaseNimi} objektid.`);
+        
+        // BOONUS: Suuname kaardi automaatselt selle õpilase tööde keskpunkti, et õpetaja näeks neid kohe!
+        try {
+            // Loome ajutise vektori, et arvutada täpne asukoht kaardil
+            const tempSource = new ol.source.Vector();
+            kõikKujundid.forEach(f => { if(f.get('opilane') === opilaseNimi) tempSource.addFeature(f); });
+            if (tempSource.getFeatures().length > 0) {
+                map.getView().fit(tempSource.getExtent(), { duration: 800, maxZoom: 15 });
+            }
+        } catch(e){}
+    }
+
+    // Uuendame tabeli tekste (et nupp muutuks "Näita kõiki" peale) ja joonistame kaardi üle
+    genereeriOpilasteStatistika();
+    map.render();
+}
+
+
